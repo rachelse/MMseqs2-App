@@ -2,6 +2,7 @@
 
 mmseqshash := 19064f27c8d86fcdcd3daad60f6db70f6360f30b
 foldseekhash := 90b254585d398393cbca9c3515feb4ec4a1e7a9f
+FRONTEND_APP2 := foldmason
 
 ifeq (${FRONTEND_APP},mmseqs)
 hash := ${mmseqshash}
@@ -50,16 +51,21 @@ resources/win/x64/mmseqs-web-backend.exe: backend/*.go backend/go.*
 
 resources/mac/${FRONTEND_APP}:
 	mkdir -p resources/mac
-	wget -nv -q -O - https://mmseqs.com/archive/$(hash)/${FRONTEND_APP}-osx-universal.tar.gz | tar -xOf - ${FRONTEND_APP}/bin/${FRONTEND_APP} > resources/mac/${FRONTEND_APP}
+	wget -nv -q -O - https://mmseqs.com/${FRONTEND_APP}/${FRONTEND_APP}-osx-universal.tar.gz | tar -xOf - ${FRONTEND_APP}/bin/${FRONTEND_APP} > resources/mac/${FRONTEND_APP}
 	chmod +x resources/mac/${FRONTEND_APP}
+	
+	wget -nv -q -O - https://mmseqs.com/${FRONTEND_APP2}/${FRONTEND_APP2}-osx-universal.tar.gz | tar -xOf - ${FRONTEND_APP2}/bin/${FRONTEND_APP2} > resources/mac/${FRONTEND_APP2}
+	chmod +x resources/mac/${FRONTEND_APP2}
 
 resources/mac/x64/${FRONTEND_APP}: resources/mac/${FRONTEND_APP}
 	mkdir -p resources/mac/x64
 	$(LIPO) resources/mac/${FRONTEND_APP} -remove arm64 -output resources/mac/x64/${FRONTEND_APP} || cp -f -- resources/mac/${FRONTEND_APP} resources/mac/x64/${FRONTEND_APP}
+	$(LIPO) resources/mac/${FRONTEND_APP2} -remove arm64 -output resources/mac/x64/${FRONTEND_APP2} || cp -f -- resources/mac/${FRONTEND_APP2} resources/mac/x64/${FRONTEND_APP2}
 
 resources/mac/arm64/${FRONTEND_APP}: resources/mac/${FRONTEND_APP}
 	mkdir -p resources/mac/arm64
 	$(LIPO) resources/mac/${FRONTEND_APP} -thin arm64 -output resources/mac/arm64/${FRONTEND_APP} || cp -f -- resources/mac/${FRONTEND_APP} resources/mac/arm64/${FRONTEND_APP}
+	$(LIPO) resources/mac/${FRONTEND_APP2} -thin arm64 -output resources/mac/arm64/${FRONTEND_APP2} || cp -f -- resources/mac/${FRONTEND_APP2} resources/mac/arm64/${FRONTEND_APP2}
 
 resources/linux/x64/${FRONTEND_APP}-sse41:
 	mkdir -p resources/linux/x64

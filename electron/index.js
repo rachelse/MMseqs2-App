@@ -14,7 +14,8 @@ require('@electron/remote/main').initialize()
 const winURL = app.isPackaged ? `file://${__dirname}/index.html` : `http://localhost:9080`;
 
 const homePath = app.getPath('home');
-const userData = app.getPath('userData');
+// const userData = app.getPath('userData');
+const userData = join(appRootDir.get(), 'resources');
 const tempPath = app.getPath('temp');
 
 const username = randomBytes(8).toString('hex');
@@ -62,6 +63,8 @@ console.log(err);
 			password,
 			"-paths." + __APP__,
 			mmseqsBinary,
+			"-paths.foldmason",
+			join(binPath, "foldmason" + (platform == "win32" ? ".exe" : "")),
 			"-paths.databases",
 			`${userData}/databases`,
 			"-paths.results",
