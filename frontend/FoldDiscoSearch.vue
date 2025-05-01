@@ -27,6 +27,8 @@
                     v-model="query">
                 </query-textarea>
     
+<input v-model="motif" type="text"></input>
+    
                 <div class="actions input-buttons-panel">
                     <div class="input-buttons-left">
                         <!-- <load-acession-button @select="query = $event" @loading="accessionLoading = $event" :preload-source="preloadSource" :preload-accession="preloadAccession"></load-acession-button> -->
@@ -171,6 +173,7 @@ export default {
             taxFilter: JSON.parse(storage.getItem('taxFilter') || 'null'),
             predictable: false,
             accessionLoading: false,
+            motif: "",
         };
     },
     async mounted() {
@@ -224,7 +227,8 @@ export default {
                 q: this.query,
                 database: this.database,
                 mode: this.mode,
-                email: this.email
+                email: this.email,
+                motif: this.motif
             };
             if (typeof(request.q) === 'string' && request.q != '') {
                 if (request.q[request.q.length - 1] != '\n') {
@@ -239,7 +243,7 @@ export default {
             }
             try {
                 this.inSearch = true;
-                const response = await this.$axios.post("api/ticket", convertToQueryUrl(request), {
+                const response = await this.$axios.post("api/ticket/folddisco", convertToQueryUrl(request), {
                     transformRequest: AxiosCompressRequest(this.$axios)
                 });
                 this.errorMessage = "";

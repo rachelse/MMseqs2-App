@@ -199,6 +199,7 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 				false,
 				false,
 				false,
+				false,
 				req.FormValue("index"),
 				req.FormValue("search"),
 				"",
@@ -535,6 +536,76 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 		}
 	}
 
+	ticketFolddiscoHandlerFunc := func(w http.ResponseWriter, req *http.Request) {
+		var query string
+		var motif string
+		var dbs []string
+		//var mode string
+		var email string
+		//var iterativesearch bool
+		var taxfilter string
+
+		if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
+			err := req.ParseMultipartForm(int64(128 * 1024 * 1024))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			f, _, err := req.FormFile("q")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(f)
+			query = buf.String()
+			dbs = req.Form["database[]"]
+			//mode = req.FormValue("mode")
+			email = req.FormValue("email")
+			motif = req.FormValue("motif")
+			//iterativesearch = req.FormValue("iterativesearch") == "true"
+			taxfilter = req.FormValue("taxfilter")
+		} else {
+			err := req.ParseForm()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			query = req.FormValue("q")
+			dbs = req.Form["database[]"]
+			//mode = req.FormValue("mode")
+			email = req.FormValue("email")
+			motif = req.FormValue("motif")
+			//iterativesearch = req.FormValue("iterativesearch") == "true"
+			taxfilter = req.FormValue("taxfilter")
+		}
+
+		databases, err := Databases(config.Paths.Databases, true)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		request, err := NewFoldDiscoJobRequest(query, motif, dbs, databases /*mode,*/, config.Paths.Results, email, taxfilter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		result, err := jobsystem.NewJob(request, config.Paths.Results, false)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(result)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
 	if config.Server.RateLimit != nil {
 		type RateLimitResponse struct {
 			Status string `json:"status"`
@@ -568,6 +639,7 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 		}
 		if config.App == AppFoldSeek {
 			r.Handle("/ticket/foldmason", ratelimitWithAllowlistHandler(allowlistedCIDRs, lmt, ticketFoldMasonMSAHandlerFunc)).Methods("POST")
+			r.Handle("/ticket/folddisco", ratelimitWithAllowlistHandler(allowlistedCIDRs, lmt, ticketFolddiscoHandlerFunc)).Methods("POST")
 		}
 	} else {
 		if config.App == AppMMseqs2 || config.App == AppFoldSeek {
@@ -581,6 +653,7 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 		}
 		if config.App == AppFoldSeek {
 			r.HandleFunc("/ticket/foldmason", ticketFoldMasonMSAHandlerFunc).Methods("POST")
+			r.HandleFunc("/ticket/folddisco", ticketFolddiscoHandlerFunc).Methods("POST")
 		}
 	}
 

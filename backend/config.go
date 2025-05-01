@@ -79,6 +79,7 @@ var defaultFileContent = []byte(`{
         // path to foldseek binary
         "foldseek"     : "~foldseek",
         "foldmason"     : "~foldmason",
+		"folddisco":     : "~folddisco",
         // path to mmseqs binary
         "mmseqs"       : "~mmseqs"
     },
@@ -172,6 +173,7 @@ type ConfigPaths struct {
 	Mmseqs    string                `json:"mmseqs"`
 	FoldSeek  string                `json:"foldseek"`
 	FoldMason string                `json:"foldmason"`
+	FoldDisco string                `json:"folddisco"`
 	ColabFold *ConfigColabFoldPaths `json:"colabfold"`
 }
 
@@ -322,6 +324,9 @@ func (c *ConfigRoot) CheckPaths() error {
 		}
 		if _, err := os.Stat(c.Paths.FoldMason); err != nil {
 			return errors.New("FoldMason binary was not found at " + c.Paths.FoldMason)
+		}
+		if _, err := os.Stat(c.Paths.FoldDisco); err != nil {
+			return errors.New("FoldDisco binary was not found at " + c.Paths.FoldDisco)
 		}
 	} else if _, err := os.Stat(c.Paths.Mmseqs); err != nil {
 		return errors.New("MMseqs2 binary was not found at " + c.Paths.Mmseqs)

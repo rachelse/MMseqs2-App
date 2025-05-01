@@ -10,10 +10,11 @@ import (
 )
 
 type FoldDiscoJob struct {
-	Size      int      `json:"size" validate:"required"`
-	Database  []string `json:"database" validate:"required"`
+	Size     int      `json:"size" validate:"required"`
+	Database []string `json:"database" validate:"required"`
 	// Mode      string   `json:"mode" validate:"oneof=3di tmalign 3diaa"`
-	TaxFilter string   `json:"taxfilter"`
+	TaxFilter string `json:"taxfilter"`
+	Motif     string
 	query     string
 }
 
@@ -21,6 +22,7 @@ func (r FoldDiscoJob) Hash() Id {
 	h := sha256.New224()
 	h.Write(([]byte)(JobFoldDisco))
 	h.Write([]byte(r.query))
+	h.Write([]byte(r.Motif))
 	// h.Write([]byte(r.Mode))
 	if r.TaxFilter != "" {
 		h.Write([]byte(r.TaxFilter))
@@ -48,12 +50,13 @@ func (r FoldDiscoJob) WritePDB(path string) error {
 	return nil
 }
 
-func NewFoldDiscoJobRequest(query string, dbs []string, validDbs []Params, resultPath string, email string, taxfilter string) (JobRequest, error) {
+func NewFoldDiscoJobRequest(query string, motif string, dbs []string, validDbs []Params, resultPath string, email string, taxfilter string) (JobRequest, error) {
 	job := FoldDiscoJob{
 		max(strings.Count(query, "HEADER"), 1),
 		dbs,
 		// mode,
 		taxfilter,
+		motif,
 		query,
 	}
 
@@ -67,9 +70,9 @@ func NewFoldDiscoJobRequest(query string, dbs []string, validDbs []Params, resul
 
 	ids := make([]string, 0)
 	for _, item := range validDbs {
-		// if item.Complex {
-		ids = append(ids, item.Path)
-		// }
+		if item.Motif {
+			ids = append(ids, item.Path)
+		}
 	}
 
 	for _, item := range job.Database {
