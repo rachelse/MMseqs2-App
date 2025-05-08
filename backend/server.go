@@ -777,6 +777,83 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 		}
 	}).Methods("GET")
 
+	r.HandleFunc("/result/folddisco/{ticket}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		// id, err := strconv.ParseInt(vars["entry"], 10, 64)
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusBadRequest)
+		// 	return
+		// }
+
+		ticket, err := jobsystem.GetTicket(Id(vars["ticket"]))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		status, err := jobsystem.Status(ticket.Id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if status != StatusComplete {
+			http.Error(w, "Job is not complete", http.StatusBadRequest)
+			return
+		}
+
+		request, err := getJobRequestFromFile(filepath.Join(config.Paths.Results, string(ticket.Id), "job.json"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		database := req.URL.Query().Get("database")
+		// var fasta []FastaEntry
+		var results []FoldDiscoResult
+
+		switch job := request.Job.(type) {
+		case FoldDiscoJob:
+			// mode = job.Mode
+			// ids := []int64{id}
+			databases := job.Database
+			if database != "" {
+				if isIn(database, job.Database) == -1 {
+					http.Error(w, "Database not found", http.StatusBadRequest)
+					return
+				}
+				databases = []string{database}
+			}
+			// FIXME: Error occuring during geting results
+			results, err = FoldDiscoAlignments(ticket.Id, databases, config.Paths.Results)
+			log.Println("Server.go: Results found ", results)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			// fasta, err = ReadQueryByIds(ticket.Id, ids, config.Paths.Results)
+			// if err != nil {
+			// 	http.Error(w, err.Error(), http.StatusBadRequest)
+			// 	return
+			// }
+		default:
+			http.Error(w, "Invalid job type", http.StatusBadRequest)
+			return
+		}
+
+		type FoldDiscoModeResponse struct {
+			// Queries []FastaEntry `json:"queries"`
+			// Mode    string            `json:"mode"`
+			Results []FoldDiscoResult `json:"results"`
+		}
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		err = json.NewEncoder(w).Encode(FoldDiscoModeResponse{results})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}).Methods("GET")
+
 	queryHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		ticket, err := jobsystem.GetTicket(Id(vars["ticket"]))

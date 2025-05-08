@@ -25,7 +25,7 @@ const (
 	JobStructureSearch JobType = "structuresearch"
 	JobComplexSearch   JobType = "complexsearch"
 	JobFoldMasonMSA    JobType = "foldmasoneasymsa"
-	JobFoldDisco	   JobType = "folddisco"
+	JobFoldDisco       JobType = "folddisco"
 )
 
 type JobRequest struct {

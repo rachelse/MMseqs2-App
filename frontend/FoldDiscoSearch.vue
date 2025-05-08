@@ -26,8 +26,8 @@
                     :loading="accessionLoading"
                     v-model="query">
                 </query-textarea>
-    
-<input v-model="motif" type="text"></input>
+
+                <input v-model="motif" type="text"></input>
     
                 <div class="actions input-buttons-panel">
                     <div class="input-buttons-left">

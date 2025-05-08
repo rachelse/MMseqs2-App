@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -180,6 +181,35 @@ func (entry ComplexAlignmentEntry) MarshalJSON() ([]byte, error) {
 	}
 }
 
+type FoldDiscoAlignmentEntry struct {
+	MarshalFormat  MarshalFormat `json:"-"`
+	Target         string        `json:"target"`
+	NodeCount      int           `json:"nodecount"`
+	IdfScore       float32       `json:"idfscore"`
+	Rmsd           float32       `json:"rmsd"`
+	TargetResidues string        `json:"targetresidues"`
+	QueryResidues  string        `json:"queryresidues"`
+}
+
+func (entry FoldDiscoAlignmentEntry) MarshalJSON() ([]byte, error) {
+	type Alias FoldDiscoAlignmentEntry
+
+	if entry.MarshalFormat == MarshalDefault {
+		return json.Marshal(&struct {
+			*Alias
+		}{
+			Alias: (*Alias)(&entry),
+		})
+	} else { // TODO: MarshalTargetNumeric, MarshalTargetOnly?
+		return nil, nil
+	}
+}
+
+type FoldDiscoResult struct {
+	Database   string      `json:"db"`
+	Alignments interface{} `json:"alignments"`
+}
+
 type EmptyEntry struct{}
 
 type FastaEntry struct {
@@ -188,19 +218,19 @@ type FastaEntry struct {
 }
 
 type SearchResult struct {
-	Database   string      `json:"db"`
-	Alignments interface{} `json:"alignments"`
+	Database        string      `json:"db"`
+	Alignments      interface{} `json:"alignments"`
 	TaxonomyReports interface{} `json:"taxonomyreports"`
 }
 
 type TaxonomyReport struct {
-    Proportion    float64 `json:"proportion"`
-    CladeReads    int     `json:"clade_reads"`
-    TaxonReads    int     `json:"taxon_reads"`
-    Rank          string  `json:"rank"`
-	Depth         int     `json:"depth"`
-    TaxonID       string  `json:"taxon_id"`
-    ScientificName string `json:"name"`
+	Proportion     float64 `json:"proportion"`
+	CladeReads     int     `json:"clade_reads"`
+	TaxonReads     int     `json:"taxon_reads"`
+	Rank           string  `json:"rank"`
+	Depth          int     `json:"depth"`
+	TaxonID        string  `json:"taxon_id"`
+	ScientificName string  `json:"name"`
 }
 
 func dbpaths(path string) (string, string) {
@@ -288,7 +318,7 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 	base := filepath.Join(jobsbase, string(id))
 	reader := Reader[uint32]{}
 	taxonomyReader := Reader[uint32]{}
-	
+
 	res := make([]SearchResult, 0)
 
 	var lookupByKey bool
@@ -307,7 +337,7 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 		if err != nil {
 			return res, err
 		}
-		
+
 		allAlignments := make([][]T, 0)
 		for _, entry := range entries {
 			// Get alignment body
@@ -322,7 +352,7 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 				body = reader.Data(alnId)
 			} else {
 				body = reader.Data(any(entry).(int64))
-			}	
+			}
 
 			// Parse alignment
 			data := strings.NewReader(body)
@@ -339,7 +369,7 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 		}
 		reader.Delete()
 
-		allTaxonomyReports := make([][]TaxonomyReport, 0)	
+		allTaxonomyReports := make([][]TaxonomyReport, 0)
 		if fileExists(name + "_report") {
 			err = taxonomyReader.Make(dbpaths(name + "_report"))
 			if err != nil {
@@ -376,73 +406,141 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 
 		base := filepath.Base(name)
 		res = append(res, SearchResult{
-			strings.TrimPrefix(base, "alis_"), 
+			strings.TrimPrefix(base, "alis_"),
 			allAlignments,
 			allTaxonomyReports,
 		})
-	} 
+	}
+
+	return res, nil
+}
+
+func ReadFoldDisco[T any](id Id, databases []string, jobsbase string) ([]FoldDiscoResult, error) {
+	base := filepath.Join(jobsbase, string(id))
+	// reader := Reader[uint32]{}
+	// taxonomyReader := Reader[uint32]{}
+
+	res := make([]FoldDiscoResult, 0)
+
+	for _, db := range databases {
+		path := filepath.Join(filepath.Clean(base), "alis_"+db)
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("result file not found")
+		}
+		defer file.Close()
+
+		allAlignments := make([][]T, 0)
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fields := strings.Split(line, "\t")
+			log.Println("Each line: ", fields)
+			// TODO
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+		// for _, entry := range entries {
+
+		// Get alignment body
+		// var body string
+		// if lookupByKey {
+		// 	alnKey := any(entry).(uint32)
+		// 	alnId, found := reader.Id(alnKey)
+		// 	if !found {
+		// 		reader.Delete()
+		// 		return nil, fmt.Errorf("missing key: %T", alnKey)
+		// 	}
+		// 	body = reader.Data(alnId)
+		// } else {
+		// 	body = reader.Data(any(entry).(int64))
+		// }
+		// var body string = reader.Data(any(entry).(int64))
+		// Parse alignment
+		// data := strings.NewReader(body)
+		// results, err := ReadAlignment[T](data)
+		// if err != nil {
+		// 	reader.Delete()
+		// 	return res, err
+		// }
+		// if len(results) == 0 {
+		// 	continue
+		// }
+
+		// allAlignments = append(allAlignments, results)
+		// }
+		// reader.Delete()
+
+		base := filepath.Base(path)
+		res = append(res, FoldDiscoResult{
+			strings.TrimPrefix(base, "alis_"),
+			allAlignments,
+		})
+	}
 
 	return res, nil
 }
 
 func ReadTaxonomyReport(taxBody string) ([]TaxonomyReport, error) {
 	// Helper function to count leading spaces
-    countLeadingSpaces := func(s string) int {
-        count := 0
-        for _, char := range s {
-            if char == ' ' {
-                count++
-            } else {
-                break
-            }
-        }
-        return count
-    }
+	countLeadingSpaces := func(s string) int {
+		count := 0
+		for _, char := range s {
+			if char == ' ' {
+				count++
+			} else {
+				break
+			}
+		}
+		return count
+	}
 
-    var reports []TaxonomyReport
+	var reports []TaxonomyReport
 	scanner := bufio.NewScanner(strings.NewReader(taxBody))
 
-    for scanner.Scan() {
-        line := scanner.Text()
-        fields := strings.Split(line, "\t")
-        if len(fields) < 6 {
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Split(line, "\t")
+		if len(fields) < 6 {
 			// Skip invalid lines
-            continue
-        }
+			continue
+		}
 
-        // Parse the fields
-        proportion, err := strconv.ParseFloat(fields[0], 64)
-        if err != nil {
-            continue
-        }
+		// Parse the fields
+		proportion, err := strconv.ParseFloat(fields[0], 64)
+		if err != nil {
+			continue
+		}
 
-        cladeReads, err := strconv.Atoi(fields[1])
-        if err != nil {
-            continue
-        }
+		cladeReads, err := strconv.Atoi(fields[1])
+		if err != nil {
+			continue
+		}
 
-        taxonReads, err := strconv.Atoi(fields[2])
-        if err != nil {
-            continue
-        }
+		taxonReads, err := strconv.Atoi(fields[2])
+		if err != nil {
+			continue
+		}
 
 		// Calculate depth from leading spaces in ScientificName
-        indentCount := countLeadingSpaces(fields[5])
-        depth := indentCount / 2 // Assuming 2 spaces per level of hierarchy
+		indentCount := countLeadingSpaces(fields[5])
+		depth := indentCount / 2 // Assuming 2 spaces per level of hierarchy
 
-        report := TaxonomyReport{
-            Proportion:    proportion,
-            CladeReads:    cladeReads,
-            TaxonReads:    taxonReads,
-            Rank:          fields[3],
-			Depth:         depth, 
-            TaxonID:       fields[4],
-            ScientificName: strings.TrimSpace(fields[5]),
-        }
-        reports = append(reports, report)
-    }
+		report := TaxonomyReport{
+			Proportion:     proportion,
+			CladeReads:     cladeReads,
+			TaxonReads:     taxonReads,
+			Rank:           fields[3],
+			Depth:          depth,
+			TaxonID:        fields[4],
+			ScientificName: strings.TrimSpace(fields[5]),
+		}
+		reports = append(reports, report)
+	}
 
-    return reports, nil
+	return reports, nil
 }
 
 func Alignments(id Id, entry []int64, databases []string, jobsbase string) ([]SearchResult, error) {
@@ -455,6 +553,11 @@ func FSAlignments(id Id, entry []int64, databases []string, jobsbase string) ([]
 
 func ComplexAlignments(id Id, entry []uint32, databases []string, jobsbase string) ([]SearchResult, error) {
 	return ReadAlignments[ComplexAlignmentEntry, uint32](id, entry, databases, jobsbase)
+}
+
+func FoldDiscoAlignments(id Id, databases []string, jobsbase string) ([]FoldDiscoResult, error) {
+	// return ReadAlignments[FoldDiscoAlignmentEntry, uint32](id, entry, databases, jobsbase)
+	return ReadFoldDisco[FoldDiscoAlignmentEntry](id, databases, jobsbase)
 }
 
 func addFile(tw *tar.Writer, path string) error {

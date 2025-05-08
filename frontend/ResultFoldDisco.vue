@@ -103,9 +103,9 @@
                         </v-btn> -->
                         
                         <v-btn-toggle mandatory v-model="tableMode" >
-                            <!-- <v-btn>
+                            <v-btn>
                                 Graphical
-                            </v-btn> -->
+                            </v-btn>
                     
                             <v-btn>
                                 Numeric
@@ -140,11 +140,6 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <!-- <template v-if="isComplex"> -->
-                                <!-- <th class="thin">ID</th> -->
-                                <!-- <th class="thin">qTM</th>
-                                <th class="thin" style="border-right: 1px solid #333; ">tTM</th>
-                                </template> -->
                                 <th :class="'wide-' + (3 - entry.hasDescription - entry.hasTaxonomy)">
                                     <template>
                                         Target
@@ -159,13 +154,13 @@
                                         <span>Triple click to select whole cell (for very long identifiers)</span>
                                     </v-tooltip>
                                 </th>
-                                <th v-if="entry.hasTaxonomy">Scientific Name</th>
-                                <th class="thin">Prob.</th>
-                                <th class="thin">Seq. Id.</th>
-                                <th class="thin">{{ $APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value' }}</th>
-                                <th class="thin" v-if="tableMode == 1">Score</th>
-                                <th v-if="tableMode == 1">Query Pos.</th>
-                                <th v-if="tableMode == 1">Target Pos.</th>
+                                <!-- <th v-if="entry.hasTaxonomy">Scientific Name</th> -->
+                                <th class="thin">IdfScore</th>
+                                <!-- <th class="thin">Seq. Id.</th> -->
+                                <!-- <th class="thin">{{ $APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value' }}</th> -->
+                                <!-- <th class="thin" v-if="tableMode == 1">Score</th> -->
+                                <!-- <th v-if="tableMode == 1">Query Pos.</th> -->
+                                <!-- <th v-if="tableMode == 1">Target Pos.</th> -->
                                 <!-- <th v-if="tableMode == 0">
                                     Position in query
                                     <v-tooltip open-delay="300" top>
@@ -175,7 +170,7 @@
                                         <span>The position of the aligned region of the target sequence in the query</span>
                                     </v-tooltip>
                                 </th> -->
-                                <th class="alignment-action thin">Alignment</th>
+                                <!-- <th class="alignment-action thin">Alignment</th> -->
                             </tr>
                         </thead>
                         <tbody>
@@ -189,25 +184,24 @@
                                     <a style="text-decoration: underline; color: #2196f3;" v-if="Array.isArray(item.href)" @click="forwardDropdown($event, item.href)"rel="noopener" :title="item.target">{{item.target}}</a>
                                     <a v-else :href="item.href" target="_blank" rel="noopener" :title="item.target">{{item.target}}</a>
                                 </td>
-                                <td class="long" data-label="Description" v-if="entry.hasDescription">
+                                <!-- <td class="long" data-label="Description" v-if="entry.hasDescription">
                                     <span :title="item.description">{{ item.description }}</span>
-                                </td>
-                                <td class="long" v-if="entry.hasTaxonomy" data-label="Taxonomy"><a :href="'https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=' + item.taxId" target="_blank" rel="noopener" :title="item.taxName">{{ item.taxName }}</a></td>
-                                <td class="thin" data-label="Probability">{{ item.prob }}</td>
-                                <td class="thin" data-label="Sequence Identity">{{ item.seqId }}</td>
-                                <td class="thin" :data-label="$APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value'">{{ item.eval }}</td>
-                                <td class="thin" v-if="tableMode == 1" data-label="Score">{{ item.score }}</td>
-                                <td v-if="tableMode == 1" data-label="Query Position">{{ item.qStartPos }}-{{ item.qEndPos }} ({{ item.qLen }})</td>
-                                <td v-if="tableMode == 1" data-label="Target Position">{{ item.dbStartPos }}-{{ item.dbEndPos }} ({{ item.dbLen }})</td>
-                                <td class="graphical" data-label="Position" v-if="tableMode == 0">
+                                </td> -->
+                                <!-- <td class="long" v-if="entry.hasTaxonomy" data-label="Taxonomy"><a :href="'https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=' + item.taxId" target="_blank" rel="noopener" :title="item.taxName">{{ item.taxName }}</a></td> -->
+                                <!-- <td class="thin" data-label="Probability">{{ item.prob }}</td> -->
+                                <!-- <td class="thin" :data-label="$APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value'">{{ item.eval }}</td> -->
+                                <!-- <td class="thin" v-if="tableMode == 1" data-label="Score">{{ item.score }}</td> -->
+                                <!-- <td v-if="tableMode == 1" data-label="Query Position">{{ item.qStartPos }}-{{ item.qEndPos }} ({{ item.qLen }})</td> -->
+                                <!-- <td v-if="tableMode == 1" data-label="Target Position">{{ item.dbStartPos }}-{{ item.dbEndPos }} ({{ item.dbLen }})</td> -->
+                                <!-- <td class="graphical" data-label="Position" v-if="tableMode == 0">
                                     <Ruler :length="item.qLen" :start="item.qStartPos" :end="item.qEndPos" :color="item.color" :label="index == 0"></Ruler>
-                                </td>
-                                <td class="alignment-action" :rowspan="1" v-if="index == 0">
+                                </td> -->
+                                <!-- <td class="alignment-action" :rowspan="1" v-if="index == 0"> -->
                                     <!-- performance issue with thousands of v-btns, hardcode the minimal button instead -->
                                     <!-- <v-btn @click="showAlignment(item, $event)" text :outlined="alignment && item.target == alignment.target" icon>
                                         <v-icon v-once>{{ $MDI.NotificationClearAll }}</v-icon>
                                     </v-btn> -->
-                                    <button 
+                                    <!-- <button 
                                         @click="showAlignment(group, entry.db, $event)"
                                         type="button"
                                         class="v-btn v-btn--icon v-btn--round v-btn--text v-size--default"
@@ -220,7 +214,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true" class="v-icon__svg"><path d="M5,13H19V11H5M3,17H17V15H3M7,7V9H21V7"></path></svg>
                                         </span></span>
                                     </button>
-                                </td>
+                                </td> -->
                             </tr>
                             <!-- <tr aria-hidden="true" v-if="isComplex" style="height: 15px"></tr> -->
                             </template>
@@ -253,8 +247,9 @@ import AlignmentPanel from './AlignmentPanel.vue';
 import Ruler from './Ruler.vue';
 // import makeZip from './lib/zip.js'
 // import SankeyDiagram from './SankeyDiagram.vue';
-
-import { debounce } from './lib/debounce';
+// import ResultMixin from './ResultMixin.vue';
+// import ResultView from './ResultView.vue';
+import { debounce } from './lib/debounce.js';
 
 function getAbsOffsetTop($el) {
     var sum = 0;
@@ -268,18 +263,20 @@ function getAbsOffsetTop($el) {
 export default {
     name: 'ResultFoldDisco',
     components: { Panel, Ruler },
-    // components: { Panel, AlignmentPanel, Ruler, SankeyDiagram },
+    // components: { ResultView },
+    // mixins: [ResultMixin],
     data() {
         return {
             alignment: null,
             activeTarget: null,
             alnBoxOffset: 0,
             selectedDatabases: 0,
+            // selectedTaxId: null,
             // isSankeyVisible: {}, // Track visibility for each db's Sankey Diagram
             selectedDb: null,
             localSelectedTaxId: null,
             filteredHitsTaxIds: [],
-            tableMode: 0,
+            tableMode: 1,
             menuActivator: null,
             menuItems: [],
         }
@@ -288,7 +285,7 @@ export default {
         ticket: "",
         error: "",
         hits: null,
-        selectedTaxId: null,
+        // selectedTaxId: null,
     },
     created() {
         window.addEventListener("resize", this.handleAlignmentBoxResize, { passive: true });
@@ -300,12 +297,6 @@ export default {
         mode() {
             return this.hits?.mode ?? "";
         },
-        // isComplex() {
-        //     if (this.hits?.results?.[0]?.alignments?.[0]?.[0]?.complexqtm != null) {
-        //         return true;
-        //     }
-        //     return false;
-        // },
         fluidLineLen() {
             if (this.$vuetify.breakpoint.xsOnly) {
                 return 30;
@@ -335,15 +326,40 @@ export default {
                     return "RESULT";
                 }
             }
-
             return "ERROR";
         }
     },
-    watch: {
-        selectedTaxId(newVal) {
-            this.localSelectedTaxId = newVal;
-            this.handleSankeySelect({ nodeId: newVal, db: this.selectedDb });
+    mounted() {
+        this.$root.$on('downloadJSON', () => {
+            let data;
+            if (this.ticket.startsWith('user-')) {
+                data = this.$root.userData;
+                download(data, `${`Foldseek_${dateTime()}.json`}`)
+            } else {
+                this.fetchAllData();
+            }
+        })
+        if (this.hits) {
+            return;
         }
+        this.fetchData();
+    },
+    destroyed () {
+        this.$root.$off('downloadJSON');
+    },
+    watch: {
+        '$route': function(to, from) {
+            if (from.path != to.path) {
+                this.fetchData();
+            }
+        },
+        // hits: function() {
+        //     // this.setColorScheme();
+        // },
+        // selectedTaxId(newVal) {
+        //     this.localSelectedTaxId = newVal;
+        //     this.handleSankeySelect({ nodeId: newVal, db: this.selectedDb });
+        // }
     },
     methods: {
         log(args) {
@@ -400,9 +416,92 @@ export default {
             let taxFiltered = group.filter(item => this.filteredHitsTaxIds.includes(Number(item.taxId)));
             return taxFiltered.length > 0;
         },
-    }
+        resetProperties() {
+            this.ticket = this.$route.params.ticket;
+            this.error = "";
+            this.hits = null;
+            // this.selectedDatabases = 0;
+            this.tableMode = 0;
+            // this.selectedTaxId = 0;
+            // this.$nextTick(() => {
+            //     this.selectedTaxId = null;
+            // });
+        },
+        async fetchData() {
+            this.resetProperties();
+            try {
+                let hits;
+                if (this.ticket.startsWith('user-')) {
+                    let localData = this.$root.userData;
+                    hits = localData[this.$route.params.entry];
+                } else {
+                    const response = await this.$axios.get("api/result/folddisco/" + this.ticket);
+                    // const response = await this.$axios.get("api/result/folddisco/" + this.ticket);
+                    const data = response.data;
+                    if (data.alignments == null || data.alignments.length > 0) {
+                        hits = parseResults(data);
+                    } else {
+                        throw new Error("No hits found");
+                    }
+                }
+                this.hits = hits;
+            } catch {
+                this.error = "Failed";
+                this.hits = null;
+            }
+        },
+    //     async fetchResult(page) {
+    //         // const url = `api/result/${this.ticket}/${page}`;
+    //         const url = `api/result/folddisco/${this.ticket}`;
+    //         // console.log("fetching result url", url)
+    //         try {
+    //             const response = await this.$axios.get(url);
+    //             return parseResults(response.data);
+    //         } catch {
+    //             // console.log("result fetch error")
+    //         }
+    //     },
+    //     async fetchAllData() {
+    //         let page = 0;
+    //         let limit = 7;
+    //         let allData = [];
+            
+    //         // List of queries [{ id, name, set }]
+    //         // Generate Promises to retrieve query PDB/results, convert PDB -> qCa string, return data
+    //         let getQueryPromises = async (queries) => {
+    //             const promises = queries.map(async query => {
+    //                 const [hitResponse, hitQuery] = await Promise.all([
+
+    //                     this.$axios.get(`api/result/${this.ticket}/${query.id}`),
+    //                     this.$axios.get(`api/result/${this.ticket}/query`)
+    //                 ]);
+    //                 const data = parseResults(hitResponse.data);
+    //                 data.query = {};
+    //                 data.query.pdb = JSON.stringify(hitQuery.data);
+    //                 data.query.qCa = pdb2ca(hitQuery.data);
+    //                 return data;
+    //             });
+    //             return Promise.all(promises);
+    //         }
+    //         // Fetch all possible queries, retrieve data for each
+    //         // Recurses around query limit
+    //         let getFn = async () => {
+    //             const queryResponse = await this.$axios.get(`api/result/queries/${this.ticket}/${limit}/${page}`);
+    //             const result = await getQueryPromises(queryResponse.data.lookup);
+    //             allData.push(...result);
+    //             if (queryResponse.data.hasNext) {
+    //                 page++;
+    //                 await getFn();
+    //             }
+    //         } 
+            
+    //         await getFn();
+    //         download(allData, `Foldseek_${dateTime()}.json`);
+    //     }
+    },
 };
 </script>
+
 
 <style lang="scss">
 @font-face {

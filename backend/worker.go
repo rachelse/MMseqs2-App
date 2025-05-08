@@ -394,7 +394,7 @@ mv -f -- "${BASE}/query.lookup_tmp" "${BASE}/query.lookup"
 
 				if params.Taxonomy {
 					parameters = append(parameters, "--report-mode")
-					parameters = append(parameters, "3") 
+					parameters = append(parameters, "3")
 				}
 
 				if params.Taxonomy && job.TaxFilter != "" {
@@ -1192,7 +1192,7 @@ rm -rf -- "${BASE}/tmp"
 			log.Print("Process finished gracefully without error")
 		}
 		return nil
-case FoldDiscoJob:
+	case FoldDiscoJob:
 		log.Print(config.Paths.FoldDisco)
 		resultBase := filepath.Join(config.Paths.Results, string(request.Id))
 		var wg sync.WaitGroup
