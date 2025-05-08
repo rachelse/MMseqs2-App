@@ -1,0 +1,9 @@
+chunk_size = 2
+foldcomp_db = "/Users/steineggerlab/Desktop/lab/repo/foldseek/example"
+grid_width = 20.0
+hash_type = "PDBTrRosetta"
+input_format = "PDB"
+max_residue = 50000
+mode = "id"
+num_bin_angle = 0
+num_bin_dist = 0
