@@ -37,7 +37,7 @@ const router = __LOCAL__ ? null : new VueRouter({
         { name: 'foldmason', path: '/foldmason', component: FoldMasonSearch },
         { name: 'folddisco', path: '/folddisco', component: FoldDiscoSearch },
         { name: 'foldmasonresult', path: '/result/foldmason/:ticket', component: ResultFoldMason },
-        { name: 'folddiscoresult', path: '/result/folddisco/:ticket/:entry', component: ResultFoldDisco },
+        { name: 'folddiscoresult', path: '/result/folddisco/:ticket', component: ResultFoldDisco },
         { name: 'queue', path: '/queue/:ticket', component: Queue },
         { 
             name: 'result',
