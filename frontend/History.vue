@@ -81,6 +81,7 @@ export default {
             this.page += 1;
         },
         fetchData: debounce(function() {
+            return;
             this.current = this.$route.params.ticket;
 
             this.error = false;

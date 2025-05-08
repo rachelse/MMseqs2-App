@@ -593,7 +593,8 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		result, err := jobsystem.NewJob(request, config.Paths.Results, false)
+		// result, err := jobsystem.NewJob(request, config.Paths.Results, false)
+		result, err := jobsystem.NewJob(request, config.Paths.Results, true) // RACHEL: unable cache usage. recover later.
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -1097,6 +1098,7 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 			return
 		}
 	})
+
 	r.Handle("/result/{ticket}/{entry}", compressHandler(resultHandler)).Methods("GET")
 
 	r.HandleFunc("/result/queries/{ticket}/{limit}/{page}", func(w http.ResponseWriter, req *http.Request) {

@@ -244,7 +244,7 @@ export default {
             try {
                 this.inSearch = true;
                 const response = await this.$axios.post("api/ticket/folddisco", convertToQueryUrl(request), {
-                    transformRequest: AxiosCompressRequest(this.$axios)
+                    //transformRequest: AxiosCompressRequest(this.$axios)
                 });
                 this.errorMessage = "";
                 switch (response.data.status) {
