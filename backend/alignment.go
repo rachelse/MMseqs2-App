@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -188,7 +187,10 @@ type FoldDiscoAlignmentEntry struct {
 	IdfScore       float32       `json:"idfscore"`
 	Rmsd           float32       `json:"rmsd"`
 	TargetResidues string        `json:"targetresidues"`
-	QueryResidues  string        `json:"queryresidues"`
+	// QueryResidues  string        `json:"queryresidues"`
+	UMatrix  string `json:"umat"`
+	TMatrix  string `json:"tmat"`
+	TargetCa string `json:"tCa"`
 }
 
 func (entry FoldDiscoAlignmentEntry) MarshalJSON() ([]byte, error) {
@@ -417,7 +419,6 @@ func ReadAlignments[T any, U interface{ ~uint32 | ~int64 }](id Id, entries []U, 
 
 func ReadFoldDisco[T any](id Id, databases []string, jobsbase string) ([]FoldDiscoResult, error) {
 	base := filepath.Join(jobsbase, string(id))
-	// reader := Reader[uint32]{}
 	// taxonomyReader := Reader[uint32]{}
 
 	res := make([]FoldDiscoResult, 0)
@@ -432,52 +433,22 @@ func ReadFoldDisco[T any](id Id, databases []string, jobsbase string) ([]FoldDis
 
 		allAlignments := make([][]T, 0)
 		scanner := bufio.NewScanner(file)
+
 		for scanner.Scan() {
 			line := scanner.Text()
-			fields := strings.Split(line, "\t")
-			log.Println("Each line: ", fields)
-			// TODO
+			data := strings.NewReader(line)
+			results, err := ReadAlignment[T](data)
+			if err != nil {
+				return res, err
+			}
+			if len(results) == 0 {
+				continue
+			}
+
+			allAlignments = append(allAlignments, results)
 		}
-
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
-		}
-		// for _, entry := range entries {
-
-		// Get alignment body
-		// var body string
-		// if lookupByKey {
-		// 	alnKey := any(entry).(uint32)
-		// 	alnId, found := reader.Id(alnKey)
-		// 	if !found {
-		// 		reader.Delete()
-		// 		return nil, fmt.Errorf("missing key: %T", alnKey)
-		// 	}
-		// 	body = reader.Data(alnId)
-		// } else {
-		// 	body = reader.Data(any(entry).(int64))
-		// }
-		// var body string = reader.Data(any(entry).(int64))
-		// Parse alignment
-		// data := strings.NewReader(body)
-		// results, err := ReadAlignment[T](data)
-		// if err != nil {
-		// 	reader.Delete()
-		// 	return res, err
-		// }
-		// if len(results) == 0 {
-		// 	continue
-		// }
-
-		// allAlignments = append(allAlignments, results)
-		// }
-		// reader.Delete()
-
-		base := filepath.Base(path)
-		res = append(res, FoldDiscoResult{
-			strings.TrimPrefix(base, "alis_"),
-			allAlignments,
-		})
+		res = append(res, FoldDiscoResult{db, allAlignments})
+		// res = append(res, FoldDiscoResult{strings.TrimPrefix(base, "alis_"), allAlignments})
 	}
 
 	return res, nil

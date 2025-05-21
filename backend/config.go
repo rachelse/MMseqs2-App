@@ -243,10 +243,11 @@ const (
 	AppColabFold      ConfigApp = "colabfold"
 	AppPredictProtein ConfigApp = "predictprotein"
 	AppFoldMason      ConfigApp = "foldmason"
+	AppFoldDisco      ConfigApp = "folddisco"
 )
 
 type ConfigRoot struct {
-	App     ConfigApp    `json:"app" validate:"oneof=mmseqs foldseek colabfold predictprotein foldmason"`
+	App     ConfigApp    `json:"app" validate:"oneof=mmseqs foldseek colabfold predictprotein foldmason folddisco"`
 	Server  ConfigServer `json:"server" validate:"required"`
 	Worker  ConfigWorker `json:"worker"`
 	Paths   ConfigPaths  `json:"paths" validate:"required"`

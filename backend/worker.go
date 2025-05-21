@@ -1220,6 +1220,7 @@ rm -rf -- "${BASE}/tmp"
 					filepath.Join(config.Paths.Databases, database),
 					"-o",
 					filepath.Join(resultBase, "alis_"+database),
+					"--superpose",
 				}
 				if job.Motif != "" {
 					parameters = append(parameters, "-q", job.Motif)

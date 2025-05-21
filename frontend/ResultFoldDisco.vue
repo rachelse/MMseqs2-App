@@ -102,7 +102,7 @@
                             {{ isSankeyVisible[entry.db] ? 'Hide Taxonomy' : 'Show Taxonomy' }}
                         </v-btn> -->
                         
-                        <v-btn-toggle mandatory v-model="tableMode" >
+                        <!-- <v-btn-toggle mandatory v-model="tableMode" >
                             <v-btn>
                                 Graphical
                             </v-btn>
@@ -110,24 +110,28 @@
                             <v-btn>
                                 Numeric
                             </v-btn>
-                        </v-btn-toggle>
+                        </v-btn-toggle> -->
                     </v-flex>
                     <!-- <v-flex v-if="entry.hasTaxonomy && isSankeyVisible[entry.db]" class="mb-2">
                         <SankeyDiagram :rawData="entry.taxonomyreports[0]" :db="entry.db" :currentSelectedNodeId="localSelectedTaxId" :currentSelectedDb="selectedDb" @selectTaxon="handleSankeySelect"></SankeyDiagram>
                     </v-flex> -->
                     <table class="v-table result-table" style="position:relativ; margin-bottom: 3em;">
                         <colgroup>
-                            <col style="width: 20%;" />
-                            <col v-if="entry.hasDescription" style="width: 30%;" />
+                            <col style="width: 20%;" /> <!-- target -->
+                            <col style="width: 10%;" /> <!-- Idf-Score --> 
+                            <col style="width: 10%;" /> <!-- RMSD --> 
+                            <col style="width: 20%;" /> <!-- Matched residues --> 
+                            <col style="width: 20%;" /> <!-- Alignment --> 
+                            <!-- <col v-if="entry.hasDescription" style="width: 30%;" />
                             <col v-if="entry.hasTaxonomy" style="width: 20%;" />
                             <col style="width: 6.5%;" />
                             <col style="width: 6.5%;" />
-                            <col style="width: 8.5%;" />
-                            <template>
+                            <col style="width: 8.5%;" /> -->
+                            <!-- <template>
                                 <col style="width: 6.5%;" />
                                 <col style="width: 10%;" />
                                 <col style="width: 10%;" />
-                            </template>
+                            </template> -->
                             <!-- <template v-if="tableMode == 0">
                                 <col style="width: 26.5%;" />
                             </template>
@@ -136,7 +140,7 @@
                                 <col style="width: 10%;" />
                                 <col style="width: 10%;" />
                             </template> -->
-                            <col style="width: 10%;" />
+                            <!-- <col style="width: 10%;" /> -->
                         </colgroup>
                         <thead>
                             <tr>
@@ -145,7 +149,7 @@
                                         Target
                                     </template>
                                 </th>
-                                <th v-if="entry.hasDescription">
+                                <!-- <th v-if="entry.hasDescription">
                                     Description
                                     <v-tooltip open-delay="300" top>
                                         <template v-slot:activator="{ on }">
@@ -153,9 +157,21 @@
                                         </template>
                                         <span>Triple click to select whole cell (for very long identifiers)</span>
                                     </v-tooltip>
-                                </th>
+                                </th> -->
                                 <!-- <th v-if="entry.hasTaxonomy">Scientific Name</th> -->
-                                <th class="thin">IdfScore</th>
+                                <th class="thin">Idf-Score</th>
+                                <th class="thin">RMSD</th>
+                                <th>
+                                    Matched residues
+                                    <v-tooltip open-delay="300" top>
+                                        <template v-slot:activator="{ on }">
+                                            <v-icon v-on="on" style="font-size: 16px; float: right;">{{ $MDI.HelpCircleOutline }}</v-icon>
+                                        </template>
+                                        <span>The position of the aligned motif residues in the target</span>
+                                    </v-tooltip>
+                                </th>
+                                <th class="alignment-action thin">Alignment</th>
+
                                 <!-- <th class="thin">Seq. Id.</th> -->
                                 <!-- <th class="thin">{{ $APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value' }}</th> -->
                                 <!-- <th class="thin" v-if="tableMode == 1">Score</th> -->
@@ -184,6 +200,15 @@
                                     <a style="text-decoration: underline; color: #2196f3;" v-if="Array.isArray(item.href)" @click="forwardDropdown($event, item.href)"rel="noopener" :title="item.target">{{item.target}}</a>
                                     <a v-else :href="item.href" target="_blank" rel="noopener" :title="item.target">{{item.target}}</a>
                                 </td>
+                                <td class="thin" data-label="Idf-Score">{{ item.idfscore }}</td>
+                                <td class="thin" data-label="RMSD">{{ item.rmsd }}</td>
+                                <td class="graphical" data-label="Matched residues">
+                                    <!-- TODO -->
+                                    <!-- <Ruler :length="item.qLen" :start="item.qStartPos" :end="item.qEndPos" :color="item.color" :label="index == 0"></Ruler> -->
+                                    {{ item.targetresidues }}
+                                </td> 
+                                <!-- <td class="graphical" data-label="Position"> -->
+                                <!-- </td> -->
                                 <!-- <td class="long" data-label="Description" v-if="entry.hasDescription">
                                     <span :title="item.description">{{ item.description }}</span>
                                 </td> -->
@@ -196,12 +221,12 @@
                                 <!-- <td class="graphical" data-label="Position" v-if="tableMode == 0">
                                     <Ruler :length="item.qLen" :start="item.qStartPos" :end="item.qEndPos" :color="item.color" :label="index == 0"></Ruler>
                                 </td> -->
-                                <!-- <td class="alignment-action" :rowspan="1" v-if="index == 0"> -->
+                                <td class="alignment-action" :rowspan="1">
                                     <!-- performance issue with thousands of v-btns, hardcode the minimal button instead -->
                                     <!-- <v-btn @click="showAlignment(item, $event)" text :outlined="alignment && item.target == alignment.target" icon>
                                         <v-icon v-once>{{ $MDI.NotificationClearAll }}</v-icon>
                                     </v-btn> -->
-                                    <!-- <button 
+                                    <button 
                                         @click="showAlignment(group, entry.db, $event)"
                                         type="button"
                                         class="v-btn v-btn--icon v-btn--round v-btn--text v-size--default"
@@ -214,7 +239,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-hidden="true" class="v-icon__svg"><path d="M5,13H19V11H5M3,17H17V15H3M7,7V9H21V7"></path></svg>
                                         </span></span>
                                     </button>
-                                </td> -->
+                                </td>
                             </tr>
                             <!-- <tr aria-hidden="true" v-if="isComplex" style="height: 15px"></tr> -->
                             </template>
@@ -240,15 +265,13 @@
 </template>
 
 <script>
-import { download, parseResults, dateTime } from './Utilities.js';
+import { download, parseFoldDiscoResults, dateTime } from './Utilities.js';
 import ResultMixin from './ResultMixin.vue';
 import Panel from './Panel.vue';
 import AlignmentPanel from './AlignmentPanel.vue';
 import Ruler from './Ruler.vue';
 // import makeZip from './lib/zip.js'
 // import SankeyDiagram from './SankeyDiagram.vue';
-// import ResultMixin from './ResultMixin.vue';
-// import ResultView from './ResultView.vue';
 import { debounce } from './lib/debounce.js';
 
 function getAbsOffsetTop($el) {
@@ -276,7 +299,7 @@ export default {
             selectedDb: null,
             localSelectedTaxId: null,
             filteredHitsTaxIds: [],
-            tableMode: 1,
+            // tableMode: 1,
             menuActivator: null,
             menuItems: [],
         }
@@ -321,6 +344,7 @@ export default {
             if (this.hits.results.length == 0) {
                 return "EMPTY";
             }
+
             for (var i in this.hits.results) {
                 if (this.hits.results[i].alignments != null) {
                     return "RESULT";
@@ -421,7 +445,7 @@ export default {
             this.error = "";
             this.hits = null;
             // this.selectedDatabases = 0;
-            this.tableMode = 0;
+            // this.tableMode = 0;
             // this.selectedTaxId = 0;
             // this.$nextTick(() => {
             //     this.selectedTaxId = null;
@@ -435,11 +459,16 @@ export default {
                     let localData = this.$root.userData;
                     hits = localData[this.$route.params.entry];
                 } else {
-                    const response = await this.$axios.get("api/result/folddisco/" + this.ticket);
-                    // const response = await this.$axios.get("api/result/folddisco/" + this.ticket);
+                    // const response = await this.$axios.get("api/result/folddisco/" + this.ticket); //Rachel: recover
+                    const response = await this.$axios.get("api/result/folddisco/" + this.ticket, {
+                        headers: {
+                            'Cache-Control': 'no-cache'
+                        }
+                    });
                     const data = response.data;
+                    
                     if (data.alignments == null || data.alignments.length > 0) {
-                        hits = parseResults(data);
+                        hits = parseFoldDiscoResults(data);
                     } else {
                         throw new Error("No hits found");
                     }
@@ -450,17 +479,17 @@ export default {
                 this.hits = null;
             }
         },
-    //     async fetchResult(page) {
-    //         // const url = `api/result/${this.ticket}/${page}`;
-    //         const url = `api/result/folddisco/${this.ticket}`;
-    //         // console.log("fetching result url", url)
-    //         try {
-    //             const response = await this.$axios.get(url);
-    //             return parseResults(response.data);
-    //         } catch {
-    //             // console.log("result fetch error")
-    //         }
-    //     },
+        // async fetchResult(page) {
+        //     // const url = `api/result/${this.ticket}/${page}`;
+        //     const url = `api/result/folddisco/${this.ticket}`;
+        //     // console.log("fetching result url", url)
+        //     try {
+        //         const response = await this.$axios.get(url);
+        //         return parseResults(response.data);
+        //     } catch {
+        //         // console.log("result fetch error")
+        //     }
+        // },
     //     async fetchAllData() {
     //         let page = 0;
     //         let limit = 7;
