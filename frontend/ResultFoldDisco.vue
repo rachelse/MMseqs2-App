@@ -252,7 +252,7 @@
         </v-layout>
         <portal>
             <panel v-if="alignment != null" class="alignment" :style="'top: ' + alnBoxOffset + 'px;'">
-                <AlignmentPanel
+                <StructureViewerMotif
                     slot="content"
                     :key="`ap-${alignment.id}`"
                     :alignments="alignment"
@@ -268,11 +268,13 @@
 import { download, parseFoldDiscoResults, dateTime } from './Utilities.js';
 import ResultMixin from './ResultMixin.vue';
 import Panel from './Panel.vue';
-import AlignmentPanel from './AlignmentPanel.vue';
+// import AlignmentPanel from './AlignmentPanel.vue';
+import StructureViewerMotif from './StructureViewerMotif.vue';
 import Ruler from './Ruler.vue';
 // import makeZip from './lib/zip.js'
 // import SankeyDiagram from './SankeyDiagram.vue';
 import { debounce } from './lib/debounce.js';
+import { Structure } from 'ngl';
 
 function getAbsOffsetTop($el) {
     var sum = 0;
@@ -285,7 +287,7 @@ function getAbsOffsetTop($el) {
 
 export default {
     name: 'ResultFoldDisco',
-    components: { Panel, Ruler },
+    components: { Panel, StructureViewerMotif },
     // components: { ResultView },
     // mixins: [ResultMixin],
     data() {
