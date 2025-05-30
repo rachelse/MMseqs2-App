@@ -1,232 +1,243 @@
 <template>
-    <div class="alignment-panel" slot="content">
-        <!-- <div class="alignment-wrapper-outer">
-            <div style="line-height: 1.2em; display: flex; flex-direction: row; width: 100%; justify-content: space-between; margin-bottom: 1em;">
-                <small v-if="$APP == 'foldseek'">
-                    Select target residues to highlight their structure.<br style="height: 0.2em">
-                    Click on highlighted sequences to dehighlight the corresponding chain.
-                </small>
-                <v-btn
-                    small
-                    title="Clear sequence selection"
-                    @click="clearAllSelection"
-                    :disabled="hasSelection"
-                >
-                    {{ (alignments[0].hasOwnProperty("complexu")) ? "Clear all selections" : "Clear selection" }}&nbsp;
-                    <v-icon style="width: 16px;">{{ $MDI.CloseCircle }}</v-icon>
-                </v-btn>
-            </div>
-
-            <template v-for="(alignment, index) in alignments">
-                {{ alignment.query.lastIndexOf('_') != -1 ? alignment.query.substring(alignment.query.lastIndexOf('_')+1) : '' }} ➔ {{ alignment.target }}
-                <Alignment
-                    :key="`aln2-${alignment.id}`"
-                    :alnIndex="index"
-                    :alignment="alignment"
-                    :lineLen="lineLen"
-                    :queryMap="queryMaps[index]"
-                    :targetMap="targetMaps[index]"
-                    :showhelp="index == alignments.length - 1"
-                    :highlights="highlights[index]"
-                    ref="alignments"
-                    @residueSelectStart="onResidueSelectStart"
-                    @residuePointerUp="onResiduePointerUp"
-                />
-            </template>
-        </div> -->
-        <div class="alignment-structure-wrapper">
-            <StructureViewer
-                :key="`struc2-${alignments[0].id}`"
-                :alignments="alignments"
-                :highlights="structureHighlights" 
-                :hits="hits"
-                bgColorLight="white"
-                bgColorDark="#1E1E1E"
-                qColor="lightgrey"
-                tColor="red"
-                qRepr="cartoon"
-                tRepr="cartoon"
-                ref="structureViewer"
+    <div class="structure-panel">
+        <StructureViewerTooltip attach=".structure-panel" />
+        <div class="structure-wrapper" ref="structurepanel">
+            <table class="tmscore-panel" v-bind="tmPanelBindings">
+            <tr>
+                <td class="left-cell">IDF-Score:</td>
+                <td class="right-cell">{{ alignments[0].idfscore }}</td>
+            </tr>
+            <tr>
+                <td class="left-cell">RMSD:</td>
+                <td class="right-cell">{{ alignments[0].rmsd  }}</td>
+            </tr>
+            </table>
+            <StructureViewerToolbar
+                :isFullscreen="isFullscreen"
+                :isSpinning="isSpinning"
+                @makeImage="handleMakeImage"
+                @resetView="handleResetView"
+                @toggleFullscreen="handleToggleFullscreen"
+                @toggleSpin="handleToggleSpin"
+                style="position: absolute; bottom: 8px;"
             />
+            <div class="structure-viewer" ref="viewport"></div>
         </div>
     </div>
 </template>
 
 <script>
-import Alignment from './Alignment.vue'
-import { makePositionMap } from './Utilities.js'
+// import Alignment from './Alignment.vue'
+import StructureViewerMixin from './StructureViewerMixin.vue';
+import { pulchra } from 'pulchra-wasm';
+import StructureViewer from './StructureViewer.vue';
+import StructureViewerToolbar from './StructureViewerToolbar.vue';
+import StructureViewerTooltip from './StructureViewerTooltip.vue';
+import { makePositionMap, transformStructure } from './Utilities.js'
+import Panel from './Panel.vue'
+import {Stage, Shape, Selection, download, ColormakerRegistry, PdbWriter, Color, concatStructures, StructureComponent } from 'ngl'
 
-/**
+/*
  * Count characters up until the given node in the parent span.
  * e.g. with layout <span 1/><span 2/><span 3/>
  * Text selection which starts/ends in span 3 will have offset relative only to span 3,
  * so we need to include length of spans 1 + 2
  */
-function calculateOffset(node) {
-    let container = node.closest("span.residues")
-    let children = container.querySelectorAll("span");
-    let length = 0;
-    for (let child of children) {
-        if (child === node)
-            break;
-        length += child.textContent.length;
-    }
-    return length;
-}
+// function calculateOffset(node) {
+//     let container = node.closest("span.residues")
+//     let children = container.querySelectorAll("span");
+//     let length = 0;
+//     for (let child of children) {
+//         if (child === node)
+//             break;
+//         length += child.textContent.length;
+//     }
+//     return length;
+// }
 
-function countCharacter(string, char) {
-    let count = 0;
-    for (let c of string) {
-        if (c === char) count++;
-    }
-    return count;
-}
+// function countCharacter(string, char) {
+//     let count = 0;
+//     for (let c of string) {
+//         if (c === char) count++;
+//     }
+//     return count;
+// }
 
 export default {
-    // components: { StructureViewer: () => __APP__ == "foldseek" ? import('./StructureViewer.vue') : null, Alignment },
-    components: { StructureViewer: import('./StructureViewer.vue') },
+    name: "StructureViewerMotif",
+    components: {
+        StructureViewerToolbar,
+        StructureViewerTooltip,
+    },
+    mixins: [
+        StructureViewerMixin
+    ],
     data: () => ({
-        queryMap: null,
-        targetMap: null,
-        highlights: [],
-        structureHighlights: [],
-        isSelecting: false,
     }),
     props: {
         alignments: { type: Array, required: true, },
         lineLen: { type: Number, required: true, },
-        hits: { type: Object }
+        queryPdb: {type: String, required: true, },
+
+        qRepr: { type: String, default: "licorice" },
+        bgColorLight: {type: String, default: "white"},
+        bgColorDark: {type: String, default: "#1E1E1E"},
+        // autoViewTime: { type: Number, default: 100 },
     },
     computed: {
-        hasSelection() {
-            return !this.structureHighlights.some(e => e !== null);
-        }
+        // hasSelection() {
+        //     return !this.structureHighlights.some(e => e !== null);
+        // }
+        bgColor() {
+            return this.$vuetify.theme.dark ? this.bgColorDark : this.bgColorLight;
+        },
+        tmPanelBindings: function() {
+            return (this.isFullscreen) ? { 'style': 'margin-top: 10px; font-size: 2em; line-height: 2em' } : {  }
+        },
+        stageParameters: function() {
+            return {
+                log: 'folddisco',
+                backgroundColor: this.bgColor,
+                transparent: true,
+                clipNear: -1000,
+                clipFar: 1000,
+                fogFar: 1000,
+                fogNear: -1000,
+            }
+        },
     },
     methods: {
-        getFirstResidueNumber(map, i) {
-            let start = this.lineLen * (i - 1);
-            while (map[start] === null) start--;
-            return map[start];
-        },
-        getQueryRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.queryMaps[alnIndex], i) },
-        getTargetRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.targetMaps[alnIndex], i) },
-        setEmptyHighlight() {
-            this.highlights = this.alignments.map(a => new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]))
-        },
-        setEmptyStructureHighlight() {
-            this.structureHighlights = new Array(this.alignments.length).fill(null);
-        },
-        clearAllSelection() {
-            this.setEmptyHighlight();
-            this.setEmptyStructureHighlight();
-        },
-        setAlignmentSelection(selections) {
-            // array per alignment, then array per line in alignment
-            this.setEmptyHighlight();
-            for (let [ alnId, startLine, startOffset, endLine, endOffset, _ ] of selections) {
-                for (let i = startLine; i <= endLine; i++) {
-                    if (i === startLine) {
-                        this.highlights[alnId][i] = [startOffset, (i === endLine) ? endOffset : this.lineLen];
-                    } else if (i === endLine) {
-                        this.highlights[alnId][i] = [0, endOffset];
-                    } else {
-                        this.highlights[alnId][i] = [0, this.lineLen];
-                    }
-                }
-            }
-        },
-        updateMaps() {
-            if (!this.alignments) return
-            this.queryMaps = [];
-            this.targetMaps = [];
-            for (let alignment of this.alignments) {
-                this.queryMaps.push(makePositionMap(alignment.qStartPos, alignment.qAln));
-                this.targetMaps.push(makePositionMap(alignment.dbStartPos, alignment.dbAln));
-            }
-
-        },
+        // setQuerySelection() {
+        //     let repr = this.stage.getRepresentationsByName("queryStructure");
+        //     if (!repr) return;
+        //     let sele = this.querySele;
+        //     repr.setSelection(sele);
+        //     repr.list[0].parent.autoView(sele, this.autoViewTime);
+        //     if (this.showQuery === 0) {
+        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(false);
+        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(false);
+        //     } else if (this.showQuery === 1) {
+        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(true);
+        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(false);
+        //     } else {
+        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(true);
+        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(true);
+        //     }
+        // },
+        // getFirstResidueNumber(map, i) {
+        //     let start = this.lineLen * (i - 1);
+        //     while (map[start] === null) start--;
+        //     return map[start];
+        // },
+        // getQueryRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.queryMaps[alnIndex], i) },
+        // getTargetRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.targetMaps[alnIndex], i) },
+        // setEmptyHighlight() {
+        //     this.highlights = this.alignments.map(a => new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]))
+        // },
+        // setEmptyStructureHighlight() {
+        //     this.structureHighlights = new Array(this.alignments.length).fill(null);
+        // },
+        // clearAllSelection() {
+        //     this.setEmptyHighlight();
+        //     this.setEmptyStructureHighlight();
+        // },
+        // setAlignmentSelection(selections) {
+        //     // array per alignment, then array per line in alignment
+        //     this.setEmptyHighlight();
+        //     for (let [ alnId, startLine, startOffset, endLine, endOffset, _ ] of selections) {
+        //         for (let i = startLine; i <= endLine; i++) {
+        //             if (i === startLine) {
+        //                 this.highlights[alnId][i] = [startOffset, (i === endLine) ? endOffset : this.lineLen];
+        //             } else if (i === endLine) {
+        //                 this.highlights[alnId][i] = [0, endOffset];
+        //             } else {
+        //                 this.highlights[alnId][i] = [0, this.lineLen];
+        //             }
+        //         }
+        //     }
+        // },
         // onResidueSelectStart(event, alnIndex, lineNo) {
         //     this.isSelecting = true;
         //     document.querySelector(".alignment-wrapper-outer")
         //         .classList.add("inselection");
         // },
-        onResiduePointerUp(event, targetAlnIndex, targetLineNo) {
-            if (!this.isSelecting) {
-                // handle as click
-                // this.highlights[targetAlnIndex].splice(targetLineNo - 1, 1, [undefined, undefined]);
-                let a = this.alignments[targetAlnIndex];
-                this.highlights.splice(targetAlnIndex, 1, new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]));
-                this.structureHighlights.splice(targetAlnIndex, 1, null);
-                window.getSelection().removeAllRanges();
-                return;
-            }
-            var selection = window.getSelection()
+        // onResiduePointerUp(event, targetAlnIndex, targetLineNo) {
+        //     if (!this.isSelecting) {
+        //         // handle as click
+        //         // this.highlights[targetAlnIndex].splice(targetLineNo - 1, 1, [undefined, undefined]);
+        //         let a = this.alignments[targetAlnIndex];
+        //         this.highlights.splice(targetAlnIndex, 1, new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]));
+        //         this.structureHighlights.splice(targetAlnIndex, 1, null);
+        //         window.getSelection().removeAllRanges();
+        //         return;
+        //     }
+        //     var selection = window.getSelection()
             
-            // Get text and (sequence) starting position for each selected alignment
-            let chunks = [];
-            let chunk = "";
-            let prevWrapper = null;
-            let currWrapper = null;
-            let lineNo = 0;
-            let alnIndex = 0;
-            let start = {};
-            for (let i = 0; i < selection.rangeCount; i++) {
-                let range = selection.getRangeAt(i);
-                currWrapper = range.startContainer.parentElement.closest(".alignment-wrapper-inner");
-                alnIndex = parseInt(currWrapper.id);
-                lineNo = parseInt(range.startContainer.parentElement.closest(".line").id);
+        //     // Get text and (sequence) starting position for each selected alignment
+        //     let chunks = [];
+        //     let chunk = "";
+        //     let prevWrapper = null;
+        //     let currWrapper = null;
+        //     let lineNo = 0;
+        //     let alnIndex = 0;
+        //     let start = {};
+        //     for (let i = 0; i < selection.rangeCount; i++) {
+        //         let range = selection.getRangeAt(i);
+        //         currWrapper = range.startContainer.parentElement.closest(".alignment-wrapper-inner");
+        //         alnIndex = parseInt(currWrapper.id);
+        //         lineNo = parseInt(range.startContainer.parentElement.closest(".line").id);
                 
-                // Start/end containers will either be:
-                // #text  - Start/end inside a span, so calculate lengths of spans until that point
-                // <span> - Start/end of entire span (e.g. multiline selection). Start = 0, end = line length
-                let sc = range.startContainer;
-                let ec = range.endContainer;
-                let startOffset = (sc.nodeType === 3) ? range.startOffset + calculateOffset(sc.parentElement) : 0;
-                let endOffset = (ec.nodeType === 3) ? range.endOffset + calculateOffset(ec.parentElement) : this.lineLen;
+        //         // Start/end containers will either be:
+        //         // #text  - Start/end inside a span, so calculate lengths of spans until that point
+        //         // <span> - Start/end of entire span (e.g. multiline selection). Start = 0, end = line length
+        //         let sc = range.startContainer;
+        //         let ec = range.endContainer;
+        //         let startOffset = (sc.nodeType === 3) ? range.startOffset + calculateOffset(sc.parentElement) : 0;
+        //         let endOffset = (ec.nodeType === 3) ? range.endOffset + calculateOffset(ec.parentElement) : this.lineLen;
                 
-                // Test for new container (alignment), store starting line/offset & calculate position in sequence
-                // If in the same alignment, extend sequence and update end line/offset
-                if (!prevWrapper) {
-                    prevWrapper = currWrapper;
-                    let preText = range.startContainer.textContent.slice(0, range.startOffset);
-                    start = {
-                        startLine: lineNo,
-                        startOffset: startOffset,
-                        seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
-                    }
-                } else if (currWrapper != prevWrapper) {
-                    chunks.push([parseInt(prevWrapper.id), start, chunk]);
-                    chunk = "";
-                    prevWrapper = currWrapper;
-                    let preText = range.startContainer.textContent.slice(0, startOffset);
-                    start = {
-                        startLine: lineNo,
-                        startOffset: startOffset,
-                        seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
-                    }
-                }
-                chunk += range.toString();
-                start.endLine = lineNo;
-                start.endOffset = endOffset;
-            }
-            chunks.push([parseInt(prevWrapper.id), start, chunk])
+        //         // Test for new container (alignment), store starting line/offset & calculate position in sequence
+        //         // If in the same alignment, extend sequence and update end line/offset
+        //         if (!prevWrapper) {
+        //             prevWrapper = currWrapper;
+        //             let preText = range.startContainer.textContent.slice(0, range.startOffset);
+        //             start = {
+        //                 startLine: lineNo,
+        //                 startOffset: startOffset,
+        //                 seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
+        //             }
+        //         } else if (currWrapper != prevWrapper) {
+        //             chunks.push([parseInt(prevWrapper.id), start, chunk]);
+        //             chunk = "";
+        //             prevWrapper = currWrapper;
+        //             let preText = range.startContainer.textContent.slice(0, startOffset);
+        //             start = {
+        //                 startLine: lineNo,
+        //                 startOffset: startOffset,
+        //                 seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
+        //             }
+        //         }
+        //         chunk += range.toString();
+        //         start.endLine = lineNo;
+        //         start.endOffset = endOffset;
+        //     }
+        //     chunks.push([parseInt(prevWrapper.id), start, chunk])
 
-            // For structure: aln Id, start in sequence, selection length
-            for (let [ alnId, { seqStart }, text ] of chunks) {
-                this.structureHighlights.splice(alnId, 1, [seqStart, text.replace(/[-]/g, '').length]);
-            }
+        //     // For structure: aln Id, start in sequence, selection length
+        //     for (let [ alnId, { seqStart }, text ] of chunks) {
+        //         this.structureHighlights.splice(alnId, 1, [seqStart, text.replace(/[-]/g, '').length]);
+        //     }
             
-            // For sequence: aln Id, line and start position (in start line), line and end position (in end line)
-            this.setAlignmentSelection(chunks.map(([ alnId, { startLine, startOffset, endLine, endOffset }, chunk ]) => (
-                [ alnId, startLine - 1, startOffset, endLine - 1, endOffset, chunk.length ]
-            )));
+        //     // For sequence: aln Id, line and start position (in start line), line and end position (in end line)
+        //     this.setAlignmentSelection(chunks.map(([ alnId, { startLine, startOffset, endLine, endOffset }, chunk ]) => (
+        //         [ alnId, startLine - 1, startOffset, endLine - 1, endOffset, chunk.length ]
+        //     )));
 
-            // Make everything else selectable again
-            this.resetUserSelect();
+        //     // Make everything else selectable again
+        //     this.resetUserSelect();
 
-            // Clear selection afterwards to prevent weird highlighting after inserting spans
-            window.getSelection().removeAllRanges();
-        },
+        //     // Clear selection afterwards to prevent weird highlighting after inserting spans
+        //     window.getSelection().removeAllRanges();
+        // },
         resetUserSelect() {
             this.isSelecting = false;
             let noselects = document.querySelectorAll(".inselection");
@@ -234,78 +245,99 @@ export default {
         }
     },
     watch: {
-        'alignment': function() {
-            this.updateMaps()
+        // 'alignment': function() {
+        //     this.updateMaps()
+        // }
+    },
+    // beforeMount() {
+    //     // this.updateMaps() // What does this do?
+    //     // this.setEmptyHighlight();
+    //     // this.setEmptyStructureHighlight();
+    // },
+    async mounted() {
+        if (typeof(this.alignments[0].tCa) == "undefined" || typeof(this.queryPdb) == "undefined")
+            return;
+
+        let data = '';
+        let ext = 'pdb';
+        
+        let queryPdb = this.queryPdb
+        queryPdb = queryPdb.trimStart();
+        if (queryPdb[0] == "#" || queryPdb.startsWith("data_")) {
+            ext = 'cif';
+            // NGL doesn't like AF3's _chem_comp entries
+            queryPdb = queryPdb.replaceAll("_chem_comp.", "_chem_comp_SKIP_HACK.");
+        } else {
+            for (let line of queryPdb.split('\n')) {
+                let numCols = Math.max(0, 80 - line.length);
+                let newLine = line + ' '.repeat(numCols) + '\n';
+                data += newLine
+            }
+            queryPdb = data;
         }
-    },
-    beforeMount() {
-        console.log("JOJO")
-        console.log("Alignments:", this.alignments)
-        console.log("Hits:", this.hits)
-        this.updateMaps()
-        // this.setEmptyHighlight();
-        // this.setEmptyStructureHighlight();
-    },
+
+        const query = await this.stage.loadFile(new Blob([this.queryPdb], { type: 'text/plain' }), { ext: ext, firstModelOnly: true, name: 'queryStructure'});
+        query.addRepresentation(this.qRepr, {color: 'blue', name: "queryStructure"})
+        query.autoView()
+
+
+        // const t = this.alignments[0].tmat.split(',').map(x => parseFloat(x));
+        // let u = this.alignments[0].umat.split(',').map(x => parseFloat(x));
+        // u = [
+        //     [u[0], u[1], u[2]],
+        //     [u[3], u[4], u[5]],
+        //     [u[6], u[7], u[8]],
+        // ];
+        // TODO: Get Target structure and make entity
+        // transformStructure(target.struture,t,u);
+
+    }
 }
 </script>
 
 <style scoped>
-.alignment-panel {
-    display: inline-flex;
-    flex-wrap: nowrap;
-    justify-content: center;
+
+.structure-panel {
     width: 100%;
+    height: 100%;
+    position: relative;
 }
-/* 
-.alignment-wrapper-outer {
-    display: inline-flex;
-    flex-direction: column;
-} */
-
-.alignment-wrapper-inner {
-    padding-bottom: 1em;
+.structure-wrapper {
+    width: 500px;
+    height: 400px;
+    margin: 0 auto;
 }
 
-.alignment-structure-wrapper {
-    min-width:450px;
-    margin: 0;
-    margin-bottom: auto;
+.structure-viewer {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
 }
 
-@media screen and (max-width: 960px) {
-    .alignment-wrapper-outer, .alignment-panel  {
+.structure-viewer canvas {
+    border-radius: 2px;
+}
+
+/* @media screen and (max-width: 960px) {
+    .structure-panel  {
         display: flex;
     }
-    .alignment-panel {
+    .structure-panel {
         flex-direction: column-reverse;
     }
-    .alignment-structure-wrapper {
+    .structure-wrapper {
         padding-bottom: 1em;
     }
-
-    .alignment-wrapper-outer, .alignment-structure-wrapper {
+    .structure-wrapper {
         align-self: center;
     }
 }
 
 @media screen and (min-width: 961px) {
-    .alignment-structure-wrapper {
+    .structure-wrapper {
         padding-left: 2em;
     }
-}
-
-</style>
-
-<style>
-span.selected {
-    border-radius: 4px;
-    background-color: rgba(0, 255, 255, 0.1);
-    box-shadow: 0 0 .4em .1em rgba(0, 255, 255, 0.5);
-    cursor: pointer;
-}
-/* TODO Some sort of banding thing here? */
-/* .alignment-wrapper-inner:nth-child(odd) span.selected {
-    background-color: rgba(0, 255, 100, 0.1);
-    box-shadow: 0 0 .4em .1em rgba(0, 255, 100, 0.5);
 } */
+
 </style>

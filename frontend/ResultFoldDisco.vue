@@ -254,27 +254,31 @@
             <panel v-if="alignment != null" class="alignment" :style="'top: ' + alnBoxOffset + 'px;'">
                 <StructureViewerMotif
                     slot="content"
+                    :alignments="alignment"
+                    :queryPdb="queryPdb"
+                    :lineLen="fluidLineLen"
+                />
+                <!-- <StructureViewerMotif
+                    slot="content"
                     :key="`ap-${alignment.id}`"
                     :alignments="alignment"
                     :lineLen="fluidLineLen"
-                    :hits="hits"
-                />
+                /> -->
             </panel>
         </portal>
     </v-container>
 </template>
 
 <script>
-import { download, parseFoldDiscoResults, dateTime } from './Utilities.js';
+import { download, parseResultsFoldDisco, dateTime} from './Utilities.js';
 import ResultMixin from './ResultMixin.vue';
 import Panel from './Panel.vue';
 // import AlignmentPanel from './AlignmentPanel.vue';
 import StructureViewerMotif from './StructureViewerMotif.vue';
-import Ruler from './Ruler.vue';
+// import Ruler from './Ruler.vue';
 // import makeZip from './lib/zip.js'
 // import SankeyDiagram from './SankeyDiagram.vue';
 import { debounce } from './lib/debounce.js';
-import { Structure } from 'ngl';
 
 function getAbsOffsetTop($el) {
     var sum = 0;
@@ -292,6 +296,11 @@ export default {
     // mixins: [ResultMixin],
     data() {
         return {
+            ticket: "",
+            error: "",
+            hits: null,
+            queryPdb: null,
+
             alignment: null,
             activeTarget: null,
             alnBoxOffset: 0,
@@ -306,12 +315,6 @@ export default {
             menuItems: [],
         }
     },
-    props: {
-        ticket: "",
-        error: "",
-        hits: null,
-        // selectedTaxId: null,
-    },
     created() {
         window.addEventListener("resize", this.handleAlignmentBoxResize, { passive: true });
     },
@@ -319,9 +322,9 @@ export default {
         window.removeEventListener("resize", this.handleAlignmentBoxResize);
     },
     computed: {
-        mode() {
-            return this.hits?.mode ?? "";
-        },
+        // mode() {
+        //     return this.hits?.mode ?? "";
+        // },
         fluidLineLen() {
             if (this.$vuetify.breakpoint.xsOnly) {
                 return 30;
@@ -446,6 +449,7 @@ export default {
             this.ticket = this.$route.params.ticket;
             this.error = "";
             this.hits = null;
+            this.queryPdb = null;
             // this.selectedDatabases = 0;
             // this.tableMode = 0;
             // this.selectedTaxId = 0;
@@ -470,7 +474,7 @@ export default {
                     const data = response.data;
                     
                     if (data.alignments == null || data.alignments.length > 0) {
-                        hits = parseFoldDiscoResults(data);
+                        hits = parseResultsFoldDisco(data);
                     } else {
                         throw new Error("No hits found");
                     }
@@ -480,55 +484,18 @@ export default {
                 this.error = "Failed";
                 this.hits = null;
             }
-        },
-        // async fetchResult(page) {
-        //     // const url = `api/result/${this.ticket}/${page}`;
-        //     const url = `api/result/folddisco/${this.ticket}`;
-        //     // console.log("fetching result url", url)
-        //     try {
-        //         const response = await this.$axios.get(url);
-        //         return parseResults(response.data);
-        //     } catch {
-        //         // console.log("result fetch error")
-        //     }
-        // },
-    //     async fetchAllData() {
-    //         let page = 0;
-    //         let limit = 7;
-    //         let allData = [];
-            
-    //         // List of queries [{ id, name, set }]
-    //         // Generate Promises to retrieve query PDB/results, convert PDB -> qCa string, return data
-    //         let getQueryPromises = async (queries) => {
-    //             const promises = queries.map(async query => {
-    //                 const [hitResponse, hitQuery] = await Promise.all([
 
-    //                     this.$axios.get(`api/result/${this.ticket}/${query.id}`),
-    //                     this.$axios.get(`api/result/${this.ticket}/query`)
-    //                 ]);
-    //                 const data = parseResults(hitResponse.data);
-    //                 data.query = {};
-    //                 data.query.pdb = JSON.stringify(hitQuery.data);
-    //                 data.query.qCa = pdb2ca(hitQuery.data);
-    //                 return data;
-    //             });
-    //             return Promise.all(promises);
-    //         }
-    //         // Fetch all possible queries, retrieve data for each
-    //         // Recurses around query limit
-    //         let getFn = async () => {
-    //             const queryResponse = await this.$axios.get(`api/result/queries/${this.ticket}/${limit}/${page}`);
-    //             const result = await getQueryPromises(queryResponse.data.lookup);
-    //             allData.push(...result);
-    //             if (queryResponse.data.hasNext) {
-    //                 page++;
-    //                 await getFn();
-    //             }
-    //         } 
-            
-    //         await getFn();
-    //         download(allData, `Foldseek_${dateTime()}.json`);
-    //     }
+            try {
+                const response = await this.$axios.get(`api/result/${this.ticket}/query`);
+                // let query = {};
+                // query.pdb = response.data;
+                const query = response.data;
+                this.queryPdb = query
+            } catch {
+                this.error = "Query not available"
+                this.queryPdb = null;
+            }
+        },
     },
 };
 </script>

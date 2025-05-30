@@ -152,7 +152,7 @@ export function parseResults(data) {
     return (total != 0 && empty / total == 1) ? ({ results: [], mode : data.mode }) : data;
 }
 
-export function parseFoldDiscoResults(data) {
+export function parseResultsFoldDisco(data) {
     let empty = 0;
     let total = 0;
     for (let i in data.results) {
