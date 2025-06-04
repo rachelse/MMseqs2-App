@@ -4,7 +4,7 @@
         <div class="structure-wrapper" ref="structurepanel">
             <table class="tmscore-panel" v-bind="tmPanelBindings">
             <tr>
-                <td class="left-cell">IDF-Score:</td>
+                <td class="left-cell">idf-score:</td>
                 <td class="right-cell">{{ alignments[0].idfscore }}</td>
             </tr>
             <tr>
@@ -33,35 +33,31 @@ import { pulchra } from 'pulchra-wasm';
 import StructureViewer from './StructureViewer.vue';
 import StructureViewerToolbar from './StructureViewerToolbar.vue';
 import StructureViewerTooltip from './StructureViewerTooltip.vue';
-import { makePositionMap, transformStructure } from './Utilities.js'
+import { makeMatrix4, makePositionMap, transformStructure } from './Utilities.js'
 import Panel from './Panel.vue'
 import {Stage, Shape, Selection, download, ColormakerRegistry, PdbWriter, Color, concatStructures, StructureComponent } from 'ngl'
 
-/*
- * Count characters up until the given node in the parent span.
- * e.g. with layout <span 1/><span 2/><span 3/>
- * Text selection which starts/ends in span 3 will have offset relative only to span 3,
- * so we need to include length of spans 1 + 2
- */
-// function calculateOffset(node) {
-//     let container = node.closest("span.residues")
-//     let children = container.querySelectorAll("span");
-//     let length = 0;
-//     for (let child of children) {
-//         if (child === node)
-//             break;
-//         length += child.textContent.length;
-//     }
-//     return length;
-// }
-
-// function countCharacter(string, char) {
-//     let count = 0;
-//     for (let c of string) {
-//         if (c === char) count++;
-//     }
-//     return count;
-// }
+const processPdb = (rawpdb) => {
+    let outpdb = '';
+    let data = '';
+    let ext = 'pdb';
+    outpdb = rawpdb.trimStart();
+    if (data[0] == "#" || data.startsWith("data_")) {
+        ext = 'cif';
+        // NGL doesn't like AF3's _chem_comp entries
+        outpdb = outpdb.replaceAll("_chem_comp.", "_chem_comp_SKIP_HACK.");
+    } else {
+        for (let line of outpdb.split('\n')) {
+            if (line.startsWith("ATOM")) {
+                let numCols = Math.max(0, 80 - line.length);
+                let newLine = line + ' '.repeat(numCols) + '\n';
+                data += newLine
+            }
+        }
+        outpdb = data;
+    }
+    return [data, ext]
+}
 
 export default {
     name: "StructureViewerMotif",
@@ -73,6 +69,7 @@ export default {
         StructureViewerMixin
     ],
     data: () => ({
+        selection: null,
     }),
     props: {
         alignments: { type: Array, required: true, },
@@ -80,6 +77,7 @@ export default {
         queryPdb: {type: String, required: true, },
 
         qRepr: { type: String, default: "licorice" },
+        tRepr: { type: String, default: "cartoon" },
         bgColorLight: {type: String, default: "white"},
         bgColorDark: {type: String, default: "#1E1E1E"},
         // autoViewTime: { type: Number, default: 100 },
@@ -258,39 +256,40 @@ export default {
         if (typeof(this.alignments[0].tCa) == "undefined" || typeof(this.queryPdb) == "undefined")
             return;
 
-        let data = '';
-        let ext = 'pdb';
-        
-        let queryPdb = this.queryPdb
-        queryPdb = queryPdb.trimStart();
-        if (queryPdb[0] == "#" || queryPdb.startsWith("data_")) {
-            ext = 'cif';
-            // NGL doesn't like AF3's _chem_comp entries
-            queryPdb = queryPdb.replaceAll("_chem_comp.", "_chem_comp_SKIP_HACK.");
-        } else {
-            for (let line of queryPdb.split('\n')) {
-                let numCols = Math.max(0, 80 - line.length);
-                let newLine = line + ' '.repeat(numCols) + '\n';
-                data += newLine
-            }
-            queryPdb = data;
+        try {
+            const ticket = this.$route.params.ticket;
+            const match = this.alignments[0];
+            const re = "api/result/folddisco/" + ticket + '?format=pdb&database=' + match.db +'&id=' + match.target;
+            const request = await this.$axios.get(re,
+                {headers: { // RACHEL: recover
+                    'Cache-Control': 'no-cache'
+                }}
+            );
+            targetPdb = request.data;
+        } catch (e) {
+            // throw e
+            alert("Error: " + (e.response?.data || e.message || "Unknown"));
+            return
         }
+        let [queryPdb, qext] = processPdb(this.queryPdb);
+        let [targetPdb, text] = processPdb(targetPdb);
+        const query = await this.stage.loadFile(new Blob([queryPdb], { type: 'text/plain' }), { ext: qext, firstModelOnly: true, name: 'queryStructure'});
+        const target = await this.stage.loadFile(new Blob([targetPdb], { type: 'text/plain' }), { ext: text, firstModelOnly: true, name: 'targetStructure'});
 
-        const query = await this.stage.loadFile(new Blob([this.queryPdb], { type: 'text/plain' }), { ext: ext, firstModelOnly: true, name: 'queryStructure'});
+        const t = this.alignments[0].tmat.split(',').map(x => parseFloat(x));
+        let u = this.alignments[0].umat.split(',').map(x => parseFloat(x));
+        u = [
+            [u[0], u[1], u[2]],
+            [u[3], u[4], u[5]],
+            [u[6], u[7], u[8]],
+        ];
+        const matrix = makeMatrix4(t, u);
+        query.setTransform(matrix);
+
         query.addRepresentation(this.qRepr, {color: 'blue', name: "queryStructure"})
-        query.autoView()
+        target.addRepresentation(this.tRepr, {color: 'red', name: "targetStructure"}) 
 
-
-        // const t = this.alignments[0].tmat.split(',').map(x => parseFloat(x));
-        // let u = this.alignments[0].umat.split(',').map(x => parseFloat(x));
-        // u = [
-        //     [u[0], u[1], u[2]],
-        //     [u[3], u[4], u[5]],
-        //     [u[6], u[7], u[8]],
-        // ];
-        // TODO: Get Target structure and make entity
-        // transformStructure(target.struture,t,u);
-
+        query.autoView();
     }
 }
 </script>

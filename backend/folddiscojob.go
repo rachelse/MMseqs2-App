@@ -14,7 +14,7 @@ type FoldDiscoJob struct {
 	Database []string `json:"database" validate:"required"`
 	// Mode      string   `json:"mode" validate:"oneof=3di tmalign 3diaa"`
 	TaxFilter string `json:"taxfilter"`
-	Motif     string
+	Motif     string `json:"motif"`
 	query     string
 }
 

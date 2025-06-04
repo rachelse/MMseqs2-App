@@ -796,15 +796,44 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 			return
 		}
 
+		database := req.URL.Query().Get("database")
+		format := req.URL.Query().Get("format")
+		tid := req.URL.Query().Get("id")
+
+		if format == "pdb" { // handle structure viewer request
+			if tid == "" {
+				http.Error(w, "Target not specified", http.StatusBadRequest)
+				return
+			}
+			tid := strings.TrimSuffix(tid, ".gz") //Rachel: handle other suffices or as foldcomp db
+			pdbpath := filepath.Join(config.Paths.Databases, database+"_pdb/"+tid)
+			if !fileExists(pdbpath) {
+				http.Error(w, "Target pdb file does not exist", http.StatusBadRequest)
+				return
+			}
+
+			pdb, err := os.ReadFile(pdbpath)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/octet-stream")
+			// w.Header().Set("Cache-Control", "public, max-age=3600")
+			w.Header().Set("Cache-Control", "no-cache, no-store") //Rachel: recover later
+			w.Write(pdb)
+			return
+		}
+
+		// var fasta []FastaEntry
+		var results []FoldDiscoResult
+		var motif string
+
 		request, err := getJobRequestFromFile(filepath.Join(config.Paths.Results, string(ticket.Id), "job.json"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		database := req.URL.Query().Get("database")
-		// var fasta []FastaEntry
-		var results []FoldDiscoResult
 
 		switch job := request.Job.(type) {
 		case FoldDiscoJob:
@@ -816,6 +845,11 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 				}
 				databases = []string{database}
 			}
+
+			motif = job.Motif
+			// if motif != "" { // RACHEL: handle later
+
+			// }
 			results, err = FoldDiscoAlignments(ticket.Id, databases, config.Paths.Results)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -830,10 +864,12 @@ func server(jobsystem JobSystem, config ConfigRoot) {
 		type FoldDiscoModeResponse struct {
 			// Queries []FastaEntry `json:"queries"`
 			// Mode    string            `json:"mode"`
+			Motif   string            `json:"motif"`
 			Results []FoldDiscoResult `json:"results"`
 		}
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		err = json.NewEncoder(w).Encode(FoldDiscoModeResponse{results})
+		// w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.Header().Set("Cache-Control", "no-cache, no-store") //Rachel: recover later
+		err = json.NewEncoder(w).Encode(FoldDiscoModeResponse{motif, results})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

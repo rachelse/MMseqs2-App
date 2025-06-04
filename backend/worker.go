@@ -1222,9 +1222,10 @@ rm -rf -- "${BASE}/tmp"
 					filepath.Join(resultBase, "alis_"+database),
 					"--superpose",
 				}
-				if job.Motif != "" {
-					parameters = append(parameters, "-q", job.Motif)
-				}
+				// RACHEL: add custom motif
+				// if job.Motif != "" {
+				// 	parameters = append(parameters, "-q", job.Motif)
+				// }
 
 				parameters = append(parameters, strings.Fields(params.Search)...)
 

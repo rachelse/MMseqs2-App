@@ -173,7 +173,7 @@ export default {
             taxFilter: JSON.parse(storage.getItem('taxFilter') || 'null'),
             predictable: false,
             accessionLoading: false,
-            motif: "",
+            motif: "todo",
         };
     },
     async mounted() {

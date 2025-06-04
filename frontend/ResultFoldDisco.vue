@@ -96,21 +96,6 @@
                         <h2 style="margin-top: 0.5em; margin-bottom: 1em; display: inline-block;" class="mr-auto">
                             <span style="text-transform: uppercase;">{{ entry.db }}</span> <small>{{ entry.alignments ? Object.values(entry.alignments).length : 0 }} hits</small>
                         </h2>
-
-                        <!-- Button to toggle Sankey Diagram visibility
-                        <v-btn v-if="entry.hasTaxonomy && !isComplex" @click="toggleSankeyVisibility(entry.db)" class="mr-2" large>
-                            {{ isSankeyVisible[entry.db] ? 'Hide Taxonomy' : 'Show Taxonomy' }}
-                        </v-btn> -->
-                        
-                        <!-- <v-btn-toggle mandatory v-model="tableMode" >
-                            <v-btn>
-                                Graphical
-                            </v-btn>
-                    
-                            <v-btn>
-                                Numeric
-                            </v-btn>
-                        </v-btn-toggle> -->
                     </v-flex>
                     <!-- <v-flex v-if="entry.hasTaxonomy && isSankeyVisible[entry.db]" class="mb-2">
                         <SankeyDiagram :rawData="entry.taxonomyreports[0]" :db="entry.db" :currentSelectedNodeId="localSelectedTaxId" :currentSelectedDb="selectedDb" @selectTaxon="handleSankeySelect"></SankeyDiagram>
@@ -118,7 +103,7 @@
                     <table class="v-table result-table" style="position:relativ; margin-bottom: 3em;">
                         <colgroup>
                             <col style="width: 20%;" /> <!-- target -->
-                            <col style="width: 10%;" /> <!-- Idf-Score --> 
+                            <col style="width: 10%;" /> <!-- idf-score --> 
                             <col style="width: 10%;" /> <!-- RMSD --> 
                             <col style="width: 20%;" /> <!-- Matched residues --> 
                             <col style="width: 20%;" /> <!-- Alignment --> 
@@ -159,7 +144,7 @@
                                     </v-tooltip>
                                 </th> -->
                                 <!-- <th v-if="entry.hasTaxonomy">Scientific Name</th> -->
-                                <th class="thin">Idf-Score</th>
+                                <th class="thin">idf-score</th>
                                 <th class="thin">RMSD</th>
                                 <th>
                                     Matched residues
@@ -200,27 +185,13 @@
                                     <a style="text-decoration: underline; color: #2196f3;" v-if="Array.isArray(item.href)" @click="forwardDropdown($event, item.href)"rel="noopener" :title="item.target">{{item.target}}</a>
                                     <a v-else :href="item.href" target="_blank" rel="noopener" :title="item.target">{{item.target}}</a>
                                 </td>
-                                <td class="thin" data-label="Idf-Score">{{ item.idfscore }}</td>
+                                <td class="thin" data-label="idf-score">{{ item.idfscore }}</td>
                                 <td class="thin" data-label="RMSD">{{ item.rmsd }}</td>
                                 <td class="graphical" data-label="Matched residues">
                                     <!-- TODO -->
                                     <!-- <Ruler :length="item.qLen" :start="item.qStartPos" :end="item.qEndPos" :color="item.color" :label="index == 0"></Ruler> -->
                                     {{ item.targetresidues }}
                                 </td> 
-                                <!-- <td class="graphical" data-label="Position"> -->
-                                <!-- </td> -->
-                                <!-- <td class="long" data-label="Description" v-if="entry.hasDescription">
-                                    <span :title="item.description">{{ item.description }}</span>
-                                </td> -->
-                                <!-- <td class="long" v-if="entry.hasTaxonomy" data-label="Taxonomy"><a :href="'https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=' + item.taxId" target="_blank" rel="noopener" :title="item.taxName">{{ item.taxName }}</a></td> -->
-                                <!-- <td class="thin" data-label="Probability">{{ item.prob }}</td> -->
-                                <!-- <td class="thin" :data-label="$APP == 'foldseek' && mode == 'tmalign' ? 'TM-score' : 'E-Value'">{{ item.eval }}</td> -->
-                                <!-- <td class="thin" v-if="tableMode == 1" data-label="Score">{{ item.score }}</td> -->
-                                <!-- <td v-if="tableMode == 1" data-label="Query Position">{{ item.qStartPos }}-{{ item.qEndPos }} ({{ item.qLen }})</td> -->
-                                <!-- <td v-if="tableMode == 1" data-label="Target Position">{{ item.dbStartPos }}-{{ item.dbEndPos }} ({{ item.dbLen }})</td> -->
-                                <!-- <td class="graphical" data-label="Position" v-if="tableMode == 0">
-                                    <Ruler :length="item.qLen" :start="item.qStartPos" :end="item.qEndPos" :color="item.color" :label="index == 0"></Ruler>
-                                </td> -->
                                 <td class="alignment-action" :rowspan="1">
                                     <!-- performance issue with thousands of v-btns, hardcode the minimal button instead -->
                                     <!-- <v-btn @click="showAlignment(item, $event)" text :outlined="alignment && item.target == alignment.target" icon>
@@ -310,7 +281,6 @@ export default {
             selectedDb: null,
             localSelectedTaxId: null,
             filteredHitsTaxIds: [],
-            // tableMode: 1,
             menuActivator: null,
             menuItems: [],
         }
