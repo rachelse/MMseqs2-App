@@ -15,9 +15,18 @@
             <StructureViewerToolbar
                 :isFullscreen="isFullscreen"
                 :isSpinning="isSpinning"
+                :showTarget="showTarget"
+                :showQuery="showQuery"
+                :disableImageButton="true"
+                :disablePDBButton="true"
+                :disableSpinButton="true"
+                :disableArrowButton="true"
                 @makeImage="handleMakeImage"
+                @makePDB="handleMakePDB"
                 @resetView="handleResetView"
                 @toggleFullscreen="handleToggleFullscreen"
+                @toggleQuery="handleToggleQuery"
+                @toggleTarget="handleToggleTarget"
                 @toggleSpin="handleToggleSpin"
                 style="position: absolute; bottom: 8px;"
             />
@@ -34,7 +43,6 @@ import StructureViewer from './StructureViewer.vue';
 import StructureViewerToolbar from './StructureViewerToolbar.vue';
 import StructureViewerTooltip from './StructureViewerTooltip.vue';
 import { makeMatrix4, makePositionMap, transformStructure } from './Utilities.js'
-import Panel from './Panel.vue'
 import {Stage, Shape, Selection, download, ColormakerRegistry, PdbWriter, Color, concatStructures, StructureComponent } from 'ngl'
 
 const processPdb = (rawpdb) => {
@@ -46,6 +54,7 @@ const processPdb = (rawpdb) => {
         ext = 'cif';
         // NGL doesn't like AF3's _chem_comp entries
         outpdb = outpdb.replaceAll("_chem_comp.", "_chem_comp_SKIP_HACK.");
+        // RACHEL: Do ATOM selection
     } else {
         for (let line of outpdb.split('\n')) {
             if (line.startsWith("ATOM")) {
@@ -69,18 +78,26 @@ export default {
         StructureViewerMixin
     ],
     data: () => ({
-        selection: null,
+        // selection: null,
+        showQuery: 0,
+        showTarget: 0,
     }),
     props: {
         alignments: { type: Array, required: true, },
         lineLen: { type: Number, required: true, },
         queryPdb: {type: String, required: true, },
 
-        qRepr: { type: String, default: "licorice" },
-        tRepr: { type: String, default: "cartoon" },
+        strRepr: { type: String, default: "cartoon" },
+        // tRepr: { type: String, default: "cartoon" },
+        motifRepr: {type: String, default: "licorice"}, 
+        // tmRepr: {type: String, default: "licorice"},
+        qClr: {type: String, default: "white"},
+        tClr: {type: String, default: "#f7b3a6"},
+        qmClr: {type: String, default: "#717171"},
+        tmClr: {type: String, default: "#e94b8a"},
         bgColorLight: {type: String, default: "white"},
         bgColorDark: {type: String, default: "#1E1E1E"},
-        // autoViewTime: { type: Number, default: 100 },
+        autoViewTime: { type: Number, default: 100 },
     },
     computed: {
         // hasSelection() {
@@ -92,6 +109,27 @@ export default {
         tmPanelBindings: function() {
             return (this.isFullscreen) ? { 'style': 'margin-top: 10px; font-size: 2em; line-height: 2em' } : {  }
         },
+        // querySele: function() { // TODO
+        //     if (this.alignments === 0 || this.showQuery == 2) {
+        //         return '';
+        //     }
+        //     if (this.showQuery === 0) {
+        //     }
+        //     if (this.showQuery === 1 ) {
+        //     }
+        // },
+        // targetSele: function() { // TODO
+        //     if (this.alignments === 0 || this.showTarget === 2) {
+        //         return '';
+        //     }
+        //     if (this.showTarget === 0) {
+        //         // this.stage.getRepresentationsByName("targetStructure").setSelection(sele);
+        //         this.stage.getRepresentationsByName("targetStructure").setVisibility(true);
+        //     }
+        //     if (this.showTarget === 1 ) {
+        //     }
+
+        // },
         stageParameters: function() {
             return {
                 log: 'folddisco',
@@ -105,147 +143,71 @@ export default {
         },
     },
     methods: {
-        // setQuerySelection() {
-        //     let repr = this.stage.getRepresentationsByName("queryStructure");
-        //     if (!repr) return;
-        //     let sele = this.querySele;
-        //     repr.setSelection(sele);
-        //     repr.list[0].parent.autoView(sele, this.autoViewTime);
-        //     if (this.showQuery === 0) {
-        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(false);
-        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(false);
-        //     } else if (this.showQuery === 1) {
-        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(true);
-        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(false);
-        //     } else {
-        //         this.stage.getRepresentationsByName("querySurface-1").setVisibility(true);
-        //         this.stage.getRepresentationsByName("querySurface-2").setVisibility(true);
-        //     }
-        // },
-        // getFirstResidueNumber(map, i) {
-        //     let start = this.lineLen * (i - 1);
-        //     while (map[start] === null) start--;
-        //     return map[start];
-        // },
-        // getQueryRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.queryMaps[alnIndex], i) },
-        // getTargetRowStartPos(alnIndex, i) { return this.getFirstResidueNumber(this.targetMaps[alnIndex], i) },
-        // setEmptyHighlight() {
-        //     this.highlights = this.alignments.map(a => new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]))
-        // },
-        // setEmptyStructureHighlight() {
-        //     this.structureHighlights = new Array(this.alignments.length).fill(null);
-        // },
-        // clearAllSelection() {
-        //     this.setEmptyHighlight();
-        //     this.setEmptyStructureHighlight();
-        // },
-        // setAlignmentSelection(selections) {
-        //     // array per alignment, then array per line in alignment
-        //     this.setEmptyHighlight();
-        //     for (let [ alnId, startLine, startOffset, endLine, endOffset, _ ] of selections) {
-        //         for (let i = startLine; i <= endLine; i++) {
-        //             if (i === startLine) {
-        //                 this.highlights[alnId][i] = [startOffset, (i === endLine) ? endOffset : this.lineLen];
-        //             } else if (i === endLine) {
-        //                 this.highlights[alnId][i] = [0, endOffset];
-        //             } else {
-        //                 this.highlights[alnId][i] = [0, this.lineLen];
-        //             }
-        //         }
-        //     }
-        // },
-        // onResidueSelectStart(event, alnIndex, lineNo) {
-        //     this.isSelecting = true;
-        //     document.querySelector(".alignment-wrapper-outer")
-        //         .classList.add("inselection");
-        // },
-        // onResiduePointerUp(event, targetAlnIndex, targetLineNo) {
-        //     if (!this.isSelecting) {
-        //         // handle as click
-        //         // this.highlights[targetAlnIndex].splice(targetLineNo - 1, 1, [undefined, undefined]);
-        //         let a = this.alignments[targetAlnIndex];
-        //         this.highlights.splice(targetAlnIndex, 1, new Array(Math.ceil(a.qAln.length / this.lineLen)).fill([undefined, undefined]));
-        //         this.structureHighlights.splice(targetAlnIndex, 1, null);
-        //         window.getSelection().removeAllRanges();
-        //         return;
-        //     }
-        //     var selection = window.getSelection()
-            
-        //     // Get text and (sequence) starting position for each selected alignment
-        //     let chunks = [];
-        //     let chunk = "";
-        //     let prevWrapper = null;
-        //     let currWrapper = null;
-        //     let lineNo = 0;
-        //     let alnIndex = 0;
-        //     let start = {};
-        //     for (let i = 0; i < selection.rangeCount; i++) {
-        //         let range = selection.getRangeAt(i);
-        //         currWrapper = range.startContainer.parentElement.closest(".alignment-wrapper-inner");
-        //         alnIndex = parseInt(currWrapper.id);
-        //         lineNo = parseInt(range.startContainer.parentElement.closest(".line").id);
-                
-        //         // Start/end containers will either be:
-        //         // #text  - Start/end inside a span, so calculate lengths of spans until that point
-        //         // <span> - Start/end of entire span (e.g. multiline selection). Start = 0, end = line length
-        //         let sc = range.startContainer;
-        //         let ec = range.endContainer;
-        //         let startOffset = (sc.nodeType === 3) ? range.startOffset + calculateOffset(sc.parentElement) : 0;
-        //         let endOffset = (ec.nodeType === 3) ? range.endOffset + calculateOffset(ec.parentElement) : this.lineLen;
-                
-        //         // Test for new container (alignment), store starting line/offset & calculate position in sequence
-        //         // If in the same alignment, extend sequence and update end line/offset
-        //         if (!prevWrapper) {
-        //             prevWrapper = currWrapper;
-        //             let preText = range.startContainer.textContent.slice(0, range.startOffset);
-        //             start = {
-        //                 startLine: lineNo,
-        //                 startOffset: startOffset,
-        //                 seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
-        //             }
-        //         } else if (currWrapper != prevWrapper) {
-        //             chunks.push([parseInt(prevWrapper.id), start, chunk]);
-        //             chunk = "";
-        //             prevWrapper = currWrapper;
-        //             let preText = range.startContainer.textContent.slice(0, startOffset);
-        //             start = {
-        //                 startLine: lineNo,
-        //                 startOffset: startOffset,
-        //                 seqStart: this.getTargetRowStartPos(alnIndex, lineNo) + startOffset - countCharacter(preText, '-')
-        //             }
-        //         }
-        //         chunk += range.toString();
-        //         start.endLine = lineNo;
-        //         start.endOffset = endOffset;
-        //     }
-        //     chunks.push([parseInt(prevWrapper.id), start, chunk])
+        handleToggleQuery() {
+            if (!this.stage) return;
 
-        //     // For structure: aln Id, start in sequence, selection length
-        //     for (let [ alnId, { seqStart }, text ] of chunks) {
-        //         this.structureHighlights.splice(alnId, 1, [seqStart, text.replace(/[-]/g, '').length]);
-        //     }
-            
-        //     // For sequence: aln Id, line and start position (in start line), line and end position (in end line)
-        //     this.setAlignmentSelection(chunks.map(([ alnId, { startLine, startOffset, endLine, endOffset }, chunk ]) => (
-        //         [ alnId, startLine - 1, startOffset, endLine - 1, endOffset, chunk.length ]
-        //     )));
+            if (__LOCAL__) {
+                this.showQuery = (this.showQuery === 0) ? 1 : 0;
+            } else {
+                this.showQuery = (this.showQuery === 2) ? 0 : this.showQuery + 1;
+            }
+        },
+        handleResetView() {
+            if (!this.stage) return;
+            this.setQuerySelection();
+        },
+        handleToggleTarget() {
+            if (!this.stage) return;
 
-        //     // Make everything else selectable again
-        //     this.resetUserSelect();
-
-        //     // Clear selection afterwards to prevent weird highlighting after inserting spans
-        //     window.getSelection().removeAllRanges();
-        // },
-        resetUserSelect() {
-            this.isSelecting = false;
-            let noselects = document.querySelectorAll(".inselection");
-            noselects.forEach(el => { el.classList.remove("inselection") });
-        }
+            if (__LOCAL__) {
+                this.showTarget = (this.showTarget === 0) ? 1 : 0;
+            } else {
+                this.showTarget = (this.showTarget === 2) ? 0 : this.showTarget + 1;
+            }            
+        },
+        setQuerySelection() {
+            if (this.alignments.length === 0 || this.showQuery === 2) {
+                return
+            }
+            let motif = this.stage.getRepresentationsByName("queryMatched");
+            if (this.showQuery === 0 ) {
+                this.stage.getRepresentationsByName("queryStructure").setVisibility(false);
+                this.stage.getRepresentationsByName("queryMotif").setVisibility(true);
+            } else if (this.showQuery === 1) {
+                this.stage.getRepresentationsByName("queryStructure").setVisibility(true);
+                this.stage.getRepresentationsByName("queryMotif").setVisibility(true);
+            }
+            // let repr = this.stage.getRepresentationsByName("queryStructure");
+            // if (!repr) return;
+            // let sele = this.querySele;
+            // repr.list[0].parent.autoView(sele, this.autoViewTime); // TODO
+        },
+        setTargetSelection() {
+            if (this.alignments.length === 0 || this.showTarget === 2) {
+                return
+            }
+            if (this.showTarget === 0 ) {
+                this.stage.getRepresentationsByName("targetStructure").setVisibility(false);
+                this.stage.getRepresentationsByName("targetMatched").setVisibility(true);
+            } else if (this.showTarget === 1) {
+                this.stage.getRepresentationsByName("targetStructure").setVisibility(true);
+                this.stage.getRepresentationsByName("targetMatched").setVisibility(true);
+            }
+            // let repr = this.stage.getRepresentationsByName("targetStructure");
+            // if (!repr) return;
+            // let sele = this.targetSele;
+            // repr.setSelection(sele); // TODO
+        },
     },
     watch: {
-        // 'alignment': function() {
-        //     this.updateMaps()
-        // }
+        'showQuery': function() {
+            if (!this.stage) return;
+            this.setQuerySelection();
+        },
+        'showTarget': function() {
+            if (!this.stage) return;
+            this.setTargetSelection();
+        },
     },
     // beforeMount() {
     //     // this.updateMaps() // What does this do?
@@ -285,11 +247,38 @@ export default {
         ];
         const matrix = makeMatrix4(t, u);
         query.setTransform(matrix);
+        
+        const matchedResidues = new Set(this.alignments[0].targetresidues.split(','));
+        const selectedTarget = [];
+        target.structure.eachResidue(r => {
+            const chain = r.chainname;
+            const resno = r.resno;
+            const key = `${chain}${resno}`;
+            if (matchedResidues.has(key)) {
+                selectedTarget.push(`${resno}:${chain}`)
+            } 
+        });
 
-        query.addRepresentation(this.qRepr, {color: 'blue', name: "queryStructure"})
-        target.addRepresentation(this.tRepr, {color: 'red', name: "targetStructure"}) 
+        this.querySchemeId = ColormakerRegistry.addSelectionScheme([ // TODO: change sele
+            [this.qmClr, "*"],
+            [this.qClr, "*"]
+        ], "_queryScheme")
 
-        query.autoView();
+        this.targetSchemeId = ColormakerRegistry.addSelectionScheme([
+            [this.tmClr, selectedTarget.join(" or ")],
+            [this.tClr, "*"]
+        ], "_targetScheme")
+
+        query.addRepresentation(this.strRepr, {color: this.querySchemeId, name: "queryStructure"})
+        target.addRepresentation(this.strRepr, {color: this.targetSchemeId, smoothSheet: true, name: "targetStructure"})
+        query.addRepresentation(this.motifRepr, {sele: "all", color: this.qmClr, name: "queryMatched"}) // TODO: change sele
+        target.addRepresentation(this.motifRepr, {sele: selectedTarget.join(" or "), color: this.tmClr, name: "targetMatched"})
+        // query.addRepresentation(this.qRepr, {color: 'blue', name: "queryUnmatched"})
+
+        this.setQuerySelection();
+        this.setTargetSelection();
+        // query.autoView(this.querySele, this.autoViewTime);
+        query.autoView(this.autoViewTime);
     }
 }
 </script>
