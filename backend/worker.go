@@ -1211,6 +1211,12 @@ rm -rf -- "${BASE}/tmp"
 					errChan <- &JobExecutionError{err}
 					return
 				}
+				if !params.Motif {
+					err := errors.New("database is not a folddisco database")
+					errChan <- &JobExecutionError{err}
+					return
+				}
+
 				parameters := []string{
 					config.Paths.FoldDisco,
 					"query",

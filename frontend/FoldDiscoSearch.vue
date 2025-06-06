@@ -58,6 +58,7 @@
                     @update:selected="database = $event"
                     @update:all-databases="databases = $event"
                     :hideEmail="hideEmail"
+                    :motif-only="true"
                     ></databases>
     
                 <v-radio-group v-model="mode">
